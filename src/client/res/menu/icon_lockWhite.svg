@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="20" viewBox="0 0 16 20">
+<defs>
+    <style>
+      #icon_Lock{
+        fill: #fff;
+        fill-rule: evenodd;
+      }
+    </style>
+  </defs>
+  <path class="cls-1" id="icon_Lock" d="M14,20H2a2,2,0,0,1-2-2V10A2,2,0,0,1,2,8H14a2,2,0,0,1,2,2v8A2,2,0,0,1,14,20ZM8,10a2.993,2.993,0,0,0-1,5.816V17a1,1,0,1,0,2,0V15.816A2.993,2.993,0,0,0,8,10ZM8,3A3,3,0,0,0,5,6H2A6,6,0,1,1,14,6H11A3,3,0,0,0,8,3Z"/>
+</svg>

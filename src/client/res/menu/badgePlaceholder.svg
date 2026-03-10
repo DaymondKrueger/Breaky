@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
+<defs>
+    <style>
+      #Rectangle_45_copy{
+        fill: #16444f;
+      }
+      #part2{
+        fill: #2e7384;
+      }
+    </style>
+  </defs>
+  <path id="Rectangle_45_copy" data-name="Rectangle 45 copy" class="cls-1" d="M26,0A26,26,0,1,1,0,26,26,26,0,0,1,26,0Zm0,4A22,22,0,1,1,4,26,22,22,0,0,1,26,4Z"/>
+  <path id="part2" class="cls-2" d="M26,8A18,18,0,1,1,8,26,18,18,0,0,1,26,8Zm7,23H21a2,2,0,0,1-2-2V26a2,2,0,0,1,2-2h4a2,2,0,0,0,0-4H19a2,2,0,0,1-2-2V15a2,2,0,0,1,2-2H33a2,2,0,0,1,2,2V29A2,2,0,0,1,33,31ZM21,34h4a2,2,0,0,1,2,2v2a2,2,0,0,1-2,2H21a2,2,0,0,1-2-2V36A2,2,0,0,1,21,34Z"/>
+</svg>

@@ -1,3 +1,9 @@
+@import url('https://fonts.googleapis.com/css?family=Open+Sans');
+@font-face{
+    font-family: 'Startoon Regular';
+    src: url('../res/Startoon-regular.ttc') format('truetype');
+}
+
 // Variables
 $bg-dark: #0d0d1a;
 $accent: #4fc3f7;
@@ -23,7 +29,7 @@ body {
 	color: white;
 }
 
-#splash {
+#main-menu {
     position: fixed;
     inset: 0;
     z-index: 100;
@@ -32,7 +38,7 @@ body {
     justify-content: center;
     background: radial-gradient(ellipse at center, #1a1a3e 0%, $bg-dark 70%);
 
-    #splash-content {
+    #menu-content {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -40,6 +46,7 @@ body {
     }
 
     #game-title {
+        font-family: Startoon Regular;
         font-size: 5rem;
         font-weight: 800;
         letter-spacing: 0.2em;

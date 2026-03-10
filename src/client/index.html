@@ -2,20 +2,28 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>IO Game</title>
+		<title>Breaky</title>
+		<meta name="viewport" content="minimal-ui, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<meta name="mobile-web-app-capable" content="yes">
+		<link rel="manifest" href="manifest.json">
+		<link rel="shortcut icon" href="res/menu/favicon.ico" />
+        <link rel="icon" type="image/ico" href="res/menu/favicon.ico" />
+		<link href="https://fonts.googleapis.com/css?family=Titillium+Web" rel="stylesheet">
 	</head>
-	<body>
-        <div id="splash">
-        <div id="splash-content">
-            <h1 id="game-title">BREAKY</h1>
-            <button id="play-btn">PLAY</button>
+	<body oncontextmenu="return false;">
+        <!-- Menu UI -->
+        <div id="main-menu">
+            <div id="menu-content">
+                <h1 id="game-title">BREAKY</h1>
+                <button id="play-btn">PLAY</button>
+            </div>
         </div>
-        </div>
+
+        <!-- Game UI -->
         <div id="ui-overlay" class="hidden">
-        <div id="hud">
-            <span id="score-display">Score: 0</span>
-        </div>
+            <div id="hud">
+                <span id="score-display">Score: 0</span>
+            </div>
         </div>
         <div id="game-container"></div>
 	</body>
