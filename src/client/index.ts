@@ -37,12 +37,12 @@ async function main() {
 	// --- Colyseus Setup ---
 	const client = new Colyseus.Client(SERVER_URL);
 
-	document.getElementById("play-btn")!.addEventListener("click", async () => {
-		// Hide splash, show HUD
-		const splash = document.getElementById("splash")!;
-		splash.style.opacity = "0";
-		splash.style.transition = "opacity 0.4s ease";
-		setTimeout(() => (splash.style.display = "none"), 400);
+	document.getElementById("play-game")!.addEventListener("click", async () => {
+		// Hide menu, show HUD
+		const mainMenu = document.getElementById("main-menu")!;
+		mainMenu.style.opacity = "0";
+		mainMenu.style.transition = "opacity 0.4s ease";
+		setTimeout(() => (mainMenu.style.display = "none"), 400);
 		document.getElementById("ui-overlay")!.classList.remove("hidden");
 
 		const room = await client.joinOrCreate<GameState>("game_room", {
@@ -60,9 +60,9 @@ async function main() {
 		playerSprites.set(sessionId, sprite);
 
 		player.onChange(() => {
-			sprite.x = player.x;
-			sprite.y = player.y;
-		});
+                sprite.x = player.x;
+                sprite.y = player.y;
+            });
 		});
 
 		// Sync state: player removed
