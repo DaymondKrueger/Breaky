@@ -151,14 +151,14 @@ export async function initGame(): Promise<void> {
 	initMap();
 
 	// Bot paddles
-	for (let j = 0; j < 4; j++) {
-		const p = new Paddle(100 + Math.round(Math.random() * (gs.MAP_WIDTH - 500)), 1, true, `Guest${Math.floor(Math.random() * 5001)}`);
-		gs.paddles.push(p);
-	}
-	for (let j = 0; j < 5; j++) {
-		const p = new Paddle(100 + Math.round(Math.random() * (gs.MAP_WIDTH - 500)), 2, true, `Guest${Math.floor(Math.random() * 5001)}`);
-		gs.paddles.push(p);
-	}
+	// for (let j = 0; j < 4; j++) {
+	// 	const p = new Paddle(100 + Math.round(Math.random() * (gs.MAP_WIDTH - 500)), 1, true, `Guest${Math.floor(Math.random() * 5001)}`);
+	// 	gs.paddles.push(p);
+	// }
+	// for (let j = 0; j < 5; j++) {
+	// 	const p = new Paddle(100 + Math.round(Math.random() * (gs.MAP_WIDTH - 500)), 2, true, `Guest${Math.floor(Math.random() * 5001)}`);
+	// 	gs.paddles.push(p);
+	// }
 
 	// Player paddle
 	const usernameInput = document.getElementById("game-username") as HTMLInputElement | null;

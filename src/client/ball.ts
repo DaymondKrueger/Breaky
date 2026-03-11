@@ -79,8 +79,8 @@ export class Ball {
 	private checkOwnColl(brick: Brick): boolean {
 		const label = brick.brick.texture.label ?? "";
 		switch (this.myPaddle.team) {
-			case 0: return label === "brickBlue_owned";
-			case 1: return label === "brickRed_owned";
+			case 0: return label.includes("brickBlue_owned");
+			case 1: return label.includes("brickRed_owned");
 		}
 		return false;
 	}
@@ -134,9 +134,9 @@ export class Ball {
 						this.bounceOff(b, aX, aY);
 						const label = b.brick.texture.label ?? "";
 						if (!this.napalmEffect) {
-							if (label === "brickT3") {
+							if (label.includes("brick_t3")) {
 								b.brick.texture = Texture.from("brickT2");
-							} else if (label === "brickT2") {
+							} else if (label.includes("brick_t2")) {
 								b.brick.texture = Texture.from("brickT1");
 							} else {
 								this.myPaddle.score += 5;
@@ -154,12 +154,12 @@ export class Ball {
 						this.bounceOff(b, aX, aY);
 						this.randNumber = Math.floor(Math.random() * 6);
 						const mysteryMap: [string, number][] = [
-						["napalmBrick",    5],
-						["multiballBrick", 6],
-						["turboBrick",     7],
-						["slowmoBrick",    8],
-						["inversionBrick", 9],
-						["shrinkrayBrick", 10],
+							["napalmBrick", 5],
+							["multiballBrick", 6],
+							["turboBrick", 7],
+							["slowmoBrick", 8],
+							["inversionBrick", 9],
+							["shrinkrayBrick", 10],
 						];
 						const [tex, type] = mysteryMap[this.randNumber];
 						b.brick.texture   = Texture.from(tex);
@@ -231,18 +231,18 @@ export class Ball {
 			this.bX *= -1;
 		}
 	}
-	}
+}
 
-	// Shared AABB collision — same logic as original isCollide() in main.js
-	function isCollide(a: Sprite, aX: number, aY: number, b: Sprite): boolean {
-		try {
-			return !(
-			(a.y + a.height + aY) < b.y ||
-			(a.y + aY)             > b.y + b.height ||
-			(a.x + a.width  + aX) < b.x ||
-			(a.x + aX)             > b.x + b.width
-			);
-		} catch {
-			return false;
-		}
+// Shared AABB collision — same logic as original isCollide() in main.js
+function isCollide(a: Sprite, aX: number, aY: number, b: Sprite): boolean {
+	try {
+		return !(
+		(a.y + a.height + aY) < b.y ||
+		(a.y + aY)             > b.y + b.height ||
+		(a.x + a.width  + aX) < b.x ||
+		(a.x + aX)             > b.x + b.width
+		);
+	} catch {
+		return false;
+	}
 }
