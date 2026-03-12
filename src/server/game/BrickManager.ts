@@ -21,8 +21,6 @@ export class BrickManager {
 	constructor(private state: GameState) {}
 
 	spawnMap(): void {
-		const ugMax = 2.5, ugMin = -2.5;
-		const rng = () => Math.floor(Math.random() * (ugMax + 1)) + ugMin;
 		const bricksPerLine = Math.ceil((C.MAP_WIDTH - 200) / (C.BRICK_WIDTH + C.BRICK_GAP)) + 1;
 		this.state.bricksPerLine = bricksPerLine;
 
@@ -38,10 +36,9 @@ export class BrickManager {
 		for (let rowIndex = 0; rowIndex < brickRows.length; rowIndex++) {
 			const [rowY, team] = brickRows[rowIndex];
 			for (let i = 0; i < bricksPerLine; i++) {
-				const ug = rng();
 				const brick = new BrickSchema();
-				brick.x = 40 + i * (C.BRICK_WIDTH + C.BRICK_GAP) + ug;
-				brick.y = rowY + ug;
+				brick.x = 40 + i * (C.BRICK_WIDTH + C.BRICK_GAP);
+				brick.y = rowY;
 				brick.relX = i;
 				brick.relY = rowIndex;
 				brick.brickType = team;
