@@ -37,6 +37,7 @@ export class PaddleSchema extends Schema {
 	team: number = 0;
 	score: number = 0;
 	username: string = "";
+	playerId: string = "";
 	scaleX: number = 1;
 	pSpeed: number = 14.16;
 	inversionEffect: boolean = false;
@@ -48,6 +49,7 @@ defineTypes(PaddleSchema, {
 	team: "number",
 	score: "number",
 	username: "string",
+	playerId: "string",
 	scaleX: "number",
 	pSpeed: "number",
 	inversionEffect: "boolean",

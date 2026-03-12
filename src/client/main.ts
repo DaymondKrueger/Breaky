@@ -170,11 +170,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const localBalls = new Map<string, LocalBall>();
 	const serverBalls = new Map<string, { x: number; y: number; vX: number; vY: number }>();
 	const ballOwnerTeam = new Map<string, number>();
-	const BALL_CORRECTION = 200; // fallback snap only — normal drift handled by lerp
+	const BALL_CORRECTION = 200; // fallback snap
 
 	// Local prediction state
 	let localPaddleX = 0;
-	let serverPaddleX = 0; // latest x received from server — used for smooth correction
+	let serverPaddleX = 0; // latest x received from server, used for smooth correction
 	let localPSpeed = C.PADDLE_WIDTH; // updated when server sends pSpeed
 	let localScaleX = 1; // updated when server sends scaleX
 	let localInversion = false;
@@ -210,7 +210,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		brick.listen("health", () => cb.update(brick));
 	});
 
-	// ─── Schema listeners: paddles ────────────────────────────────────────────
+	// Schema listeners: paddles
 	const updateLobbyList = () => {
 		lobbyPlayerList.innerHTML = "";
 		room.state.paddles.forEach((p, sid) => {
@@ -278,9 +278,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		// Track server position for drift correction
 		ball.listen("x",  v => { const s = serverBalls.get(ballId); if (s) s.x  = v; });
 		ball.listen("y",  v => { const s = serverBalls.get(ballId); if (s) s.y  = v; });
-		// Immediately apply velocity changes to local state — this keeps powerup
-		// velocity changes (turbo etc) in sync without waiting for position drift.
-		// Safe for bounces too: if client already bounced (same new value), no-op.
 		ball.listen("vX", v => {
 			const s = serverBalls.get(ballId); if (s) s.vX = v;
 			const l = localBalls.get(ballId);  if (l) l.vX = v;
@@ -353,8 +350,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			}
 			localPaddleX = Math.max(34, Math.min(maxX, localPaddleX));
 
-			// Smooth server correction — gentle lerp so it's invisible to the player.
-			// Hard snap only if we're extremely far off (wall clip, teleport, etc.).
+			// Smooth server correction, gentle lerp so it's invisible to the player. Hard snap only if we're extremely far off
 			const paddleErr = serverPaddleX - localPaddleX;
 			if (Math.abs(paddleErr) > PADDLE_SNAP_THRESHOLD) {
 				localPaddleX = serverPaddleX;
@@ -385,7 +381,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			const ownerTeam = ballOwnerTeam.get(ballId) ?? 0;
 			const paddle = room.state.paddles.get(local.ownerSessionId) ?? null;
 
-			// Run identical physics to the server — no callbacks needed client-side
 			stepBall(local, room.state.bricks, paddle, ownerTeam, dt, { onBrickHit: () => {} });
 
 			// Position correction toward server.
@@ -395,11 +390,13 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 				const dx = server.x - local.x;
 				const dy = server.y - local.y;
 				if (Math.abs(dx) > BALL_CORRECTION || Math.abs(dy) > BALL_CORRECTION) {
-					// Extreme case — snap and re-seed velocity
-					local.x = server.x; local.y = server.y;
-					local.vX = server.vX; local.vY = server.vY;
+					// Extreme case. Snap and re-seed velocity
+					local.x = server.x;
+                    local.y = server.y;
+					local.vX = server.vX;
+                    local.vY = server.vY;
 				} else {
-					// Normal case — smooth correction, completely invisible
+					// Normal case. Smooth correction
 					local.x += dx * 0.08;
 					local.y += dy * 0.08;
 				}

@@ -15,9 +15,15 @@ document.getElementById("play-game")!.addEventListener("click", async () => {
 	const usernameInput = document.getElementById("game-username") as HTMLInputElement | null;
 	const username = usernameInput?.value || `Guest${Math.floor(Math.random() * 5001)}`;
 
-	const room = await client.joinOrCreate<GameState>("game_room", { name: username });
+    let playerId = localStorage.getItem("breaky_player_id");
+	if (!playerId) {
+		playerId = `pid_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+		localStorage.setItem("breaky_player_id", playerId);
+	}
+
+	const room = await client.joinOrCreate<GameState>("game_room", { name: username, playerId: playerId });
 	console.log("Joined room:", room.id);
 
-	// Pass room to initGame — all schema listeners are wired there
+	// Pass room to initGame - all schema listeners are wired there
 	await initGame(room);
 });

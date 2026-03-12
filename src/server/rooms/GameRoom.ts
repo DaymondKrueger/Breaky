@@ -9,7 +9,7 @@ import * as C from "../../shared/constants";
 const MIN_PLAYERS = 1;
 const COUNTDOWN_SECONDS = 5;
 
-interface JoinOptions  { name?: string; }
+interface JoinOptions  { name?: string; playerId?: string; }
 interface InputMessage { left: boolean; right: boolean; }
 
 export class GameRoom extends Room<GameState> {
@@ -56,7 +56,16 @@ export class GameRoom extends Room<GameState> {
 
 	onJoin(client: Client, options: JoinOptions) {
 		if (this.state.phase !== "lobby") {
-			throw new Error("Game already in progress — join a new room.");
+			throw new Error("Game already in progress. Join a new room.");
+		}
+
+        // Reject if this playerId is already in the room
+		if (options.playerId) {
+			let alreadyPresent = false;
+			this.state.paddles.forEach((p) => {
+				if (p.playerId === options.playerId) alreadyPresent = true;
+			});
+			if (alreadyPresent) throw new Error("Already in this room.");
 		}
 
 		const teamCount = [0, 0];
@@ -72,7 +81,7 @@ export class GameRoom extends Room<GameState> {
 		this.state.paddles.set(client.sessionId, paddle);
 		this.inputs.set(client.sessionId, { left: false, right: false });
 
-		console.log(`[GameRoom] ${paddle.username} joined (team ${team}).`);
+		console.log(`[GameRoom] ${paddle.username} joined (team ${team}). Player ID of ${options.playerId}`);
 	}
 
 	onLeave(client: Client) {

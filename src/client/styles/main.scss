@@ -31,7 +31,7 @@ html, body {
 #main-menu {
     position: fixed;
     inset: 0;
-    z-index: 100;
+    z-index: 1;
     background: #0E2630;
 
     .background {
@@ -198,7 +198,7 @@ html, body {
 #lobby-overlay {
     position: fixed;
     inset: 0;
-    z-index: 90;
+    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: center;
