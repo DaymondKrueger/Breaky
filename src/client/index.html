@@ -15,37 +15,39 @@
         <div id="main-menu">
 		    <div class="background"></div>
             
-            <div id="menu-content">
-                <!-- Left side of main menu -->
-                <div class="container">
-                    <div class="user-container">
-                        <img src="res/menu/avatar_guest.png" draggable="false" class="avatar">
-                        <div class="input-bar">
-                            <input type="text" name="game-username" id="game-username" placeholder="Enter Username">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" class="icon"><defs><style>#icons_User{fill: #20D7E7;fill-rule: evenodd;}</style></defs><path class="cls-1" id="icons_User" d="M14.384,18H3.679C-0.015,18,.07,15.757.07,15.757v-1.8c0-3.643,1.395-3.886,1.395-3.886,1.219-.409,3.124,1.356,3.124,1.356A7.376,7.376,0,0,0,9.031,12.7a7.376,7.376,0,0,0,4.443-1.27s1.9-1.765,3.124-1.356c0,0,1.395.243,1.395,3.886v1.8S18.078,18,14.384,18ZM9,0A5,5,0,1,1,4,5,5,5,0,0,1,9,0Z"/></svg>
+            <div class="menu-wrapper">
+                <div id="menu-content">
+                    <!-- Left side of main menu -->
+                    <div class="container">
+                        <div class="user-container">
+                            <img src="res/menu/avatar_guest.png" draggable="false" class="avatar">
+                            <div class="input-bar">
+                                <input type="text" name="game-username" id="game-username" placeholder="Enter Username">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" class="icon"><defs><style>#icons_User{fill: #20D7E7;fill-rule: evenodd;}</style></defs><path class="cls-1" id="icons_User" d="M14.384,18H3.679C-0.015,18,.07,15.757.07,15.757v-1.8c0-3.643,1.395-3.886,1.395-3.886,1.219-.409,3.124,1.356,3.124,1.356A7.376,7.376,0,0,0,9.031,12.7a7.376,7.376,0,0,0,4.443-1.27s1.9-1.765,3.124-1.356c0,0,1.395.243,1.395,3.886v1.8S18.078,18,14.384,18ZM9,0A5,5,0,1,1,4,5,5,5,0,0,1,9,0Z"/></svg>
+                            </div>
                         </div>
+                        <div class="play-game-container">
+                            <div class="play-game-underlay"></div>
+                            <div class="play-game" id="play-game">Play Game!</div>
+                        </div>
+                        <div class="divider"></div>
+                        <!-- Everything underneath divider on left side of mainmenu -->
                     </div>
-                    <div class="play-game-container">
-                        <div class="play-game-underlay"></div>
-                        <div class="play-game" id="play-game">Play Game!</div>
+                    <div class="divider vert"></div>
+                    <!-- Right side of main menu -->
+                    <div class="container">
+                        Right side
                     </div>
-                    <div class="divider"></div>
-                    <!-- Everything underneath divider on left side of mainmenu -->
                 </div>
-                <div class="divider vert"></div>
-                <!-- Right side of main menu -->
-                <div class="container">
-                    Right side
-                </div>
-            </div>
-        </div>
 
-        <div id="lobby-overlay" style="display:none;">
-            <div id="lobby-content">
-                <h2 id="lobby-title">WAITING FOR PLAYERS</h2>
-                <ul id="lobby-player-list"></ul>
-                <div id="lobby-countdown" style="display:none;"></div>
-                <button id="ready-btn">READY</button>
+                <div id="lobby-content">
+                    <div class="container">
+                        <h2 id="lobby-title">Waiting for players</h2>
+                        <ul id="lobby-player-list"></ul>
+                        <div id="lobby-countdown"></div>
+                        <button id="ready-btn">Ready up!</button>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -136,7 +136,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	}
 
 	// Lobby overlay elements
-	const lobbyOverlay = document.getElementById("lobby-overlay")!;
+	const mainMenu = document.getElementById("main-menu")!;
+	const lobbyContent = document.getElementById("lobby-content")!;
 	const lobbyPlayerList = document.getElementById("lobby-player-list")!;
 	const readyBtn = document.getElementById("ready-btn")!;
 	const countdownEl = document.getElementById("lobby-countdown")!;
@@ -147,11 +148,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		isReady = !isReady;
 		if (isReady) {
 			room.send("ready");
-			readyBtn.textContent = "✓ READY";
+			readyBtn.textContent = "Unready";
 			readyBtn.classList.add("ready");
 		} else {
 			room.send("unready");
-			readyBtn.textContent = "READY";
+			readyBtn.textContent = "Ready up!";
 			readyBtn.classList.remove("ready");
 		}
 	});
@@ -308,13 +309,13 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	// Phase changes
 	room.state.listen("phase", (phase) => {
 		if (phase === "countdown" || phase === "lobby") {
-			lobbyOverlay.style.display = "flex";
+			lobbyContent.style.display = "flex";
+            lobbyContent.style.opacity = "1";
 			countdownEl.style.display = phase === "countdown" ? "block" : "none";
 			readyBtn.style.display = phase === "lobby" ? "block" : "none";
 		} else {
-			lobbyOverlay.style.opacity = "0";
-			lobbyOverlay.style.transition = "opacity 0.4s ease";
-			setTimeout(() => (lobbyOverlay.style.display = "none"), 400);
+			mainMenu.style.opacity = "0";
+			setTimeout(() => (mainMenu.style.display = "none"), 400);
 		}
 	});
 

@@ -7,10 +7,9 @@ const SERVER_URL = process.env.NODE_ENV === "production" ? `wss://${window.locat
 const client = new Colyseus.Client(SERVER_URL);
 
 document.getElementById("play-game")!.addEventListener("click", async () => {
-	const mainMenu = document.getElementById("main-menu")!;
-	mainMenu.style.opacity = "0";
-	mainMenu.style.transition = "opacity 0.4s ease";
-	const hideMainMenu = setTimeout(() => (mainMenu.style.display = "none"), 400);
+	const menuContent = document.getElementById("menu-content")!;
+	menuContent.style.opacity = "0";
+	const hideMenuContent = setTimeout(() => (menuContent.style.display = "none"), 400);
 
 	const usernameInput = document.getElementById("game-username") as HTMLInputElement | null;
 	const username = usernameInput?.value || `Guest${Math.floor(Math.random() * 5001)}`;
@@ -29,9 +28,9 @@ document.getElementById("play-game")!.addEventListener("click", async () => {
         // Pass room to initGame - all schema listeners are wired there
         await initGame(room);
     } catch (e) {
-        mainMenu.style.opacity = "1";
-        mainMenu.style.display = "block";
-        clearTimeout(hideMainMenu);
+        menuContent.style.opacity = "1";
+        menuContent.style.display = "flex";
+        clearTimeout(hideMenuContent);
         // TODO: Show an error message HTML element instead of an alert
         alert(e);
     }
