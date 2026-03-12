@@ -10,7 +10,7 @@ document.getElementById("play-game")!.addEventListener("click", async () => {
 	const mainMenu = document.getElementById("main-menu")!;
 	mainMenu.style.opacity = "0";
 	mainMenu.style.transition = "opacity 0.4s ease";
-	setTimeout(() => (mainMenu.style.display = "none"), 400);
+	const hideMainMenu = setTimeout(() => (mainMenu.style.display = "none"), 400);
 
 	const usernameInput = document.getElementById("game-username") as HTMLInputElement | null;
 	const username = usernameInput?.value || `Guest${Math.floor(Math.random() * 5001)}`;
@@ -21,9 +21,18 @@ document.getElementById("play-game")!.addEventListener("click", async () => {
 		localStorage.setItem("breaky_player_id", playerId);
 	}
 
-	const room = await client.joinOrCreate<GameState>("game_room", { name: username, playerId: playerId });
-	console.log("Joined room:", room.id);
+    try {
+	    const room = await client.joinOrCreate<GameState>("game_room", { name: username, playerId: playerId });
 
-	// Pass room to initGame - all schema listeners are wired there
-	await initGame(room);
+        console.log("Joined room:", room.id);
+
+        // Pass room to initGame - all schema listeners are wired there
+        await initGame(room);
+    } catch (e) {
+        mainMenu.style.opacity = "1";
+        mainMenu.style.display = "block";
+        clearTimeout(hideMainMenu);
+        // TODO: Show an error message HTML element instead of an alert
+        alert(e);
+    }
 });
