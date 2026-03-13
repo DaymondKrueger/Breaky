@@ -179,29 +179,44 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	let localPSpeed = C.PADDLE_WIDTH; // updated when server sends pSpeed
 	let localScaleX = 1; // updated when server sends scaleX
 	let localInversion = false;
-	let leftPressed = false;
-	let rightPressed = false;
 	const PADDLE_SNAP_THRESHOLD = 120; // hard snap only for extreme desync
 
-	const sendInput = () => room.send("input", { left: leftPressed, right: rightPressed });
+    type InputAction = "left" | "right";
 
-	window.addEventListener("keydown", (e) => {
-		if (e.keyCode === 39 || e.keyCode === 68) { rightPressed = true; sendInput(); }
-		if (e.keyCode === 37 || e.keyCode === 65) { leftPressed  = true; sendInput(); }
-	});
-	window.addEventListener("keyup", (e) => {
-		if (e.keyCode === 39 || e.keyCode === 68) { rightPressed = false; sendInput(); }
-		if (e.keyCode === 37 || e.keyCode === 65) { leftPressed  = false; sendInput(); }
-	});
-	window.addEventListener("touchstart", (e) => {
-		leftPressed  = e.touches[0].pageX / window.innerWidth < 0.5;
-		rightPressed = !leftPressed;
-		sendInput();
-	}, true);
-	window.addEventListener("touchend", () => {
-		leftPressed = rightPressed = false;
-		sendInput();
-	}, true);
+    const keyMap: Record<string, InputAction> = {
+        ArrowRight: "right",
+        KeyD: "right",
+        ArrowLeft: "left",
+        KeyA: "left"
+    };
+
+    const input: Record<InputAction, boolean> = {
+        left: false,
+        right: false
+    };
+
+    const sendInput = () => room.send("input", input);
+
+    window.addEventListener("keydown", (e: KeyboardEvent) => setKey(e, true));
+    window.addEventListener("keyup", (e: KeyboardEvent) => setKey(e, false));
+
+    function setKey(e: KeyboardEvent, pressed: boolean) {
+        const action = keyMap[e.code];
+        if (!action) return;
+
+        input[action] = pressed;
+        sendInput();
+    }
+
+	// window.addEventListener("touchstart", (e) => {
+	// 	leftPressed  = e.touches[0].pageX / window.innerWidth < 0.5;
+	// 	rightPressed = !leftPressed;
+	// 	sendInput();
+	// }, true);
+	// window.addEventListener("touchend", () => {
+	// 	leftPressed = rightPressed = false;
+	// 	sendInput();
+	// }, true);
 
 	// Schema listeners: bricks
 	room.state.bricks.onAdd((brick, index) => {
@@ -343,11 +358,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			const paddleW = C.PADDLE_WIDTH * localScaleX;
 			const maxX = C.MAP_WIDTH - paddleW - 34;
 			if (localInversion) {
-				if (rightPressed) localPaddleX -= localPSpeed * dt;
-				if (leftPressed) localPaddleX += localPSpeed * dt;
+				if (input.right) localPaddleX -= localPSpeed * dt;
+				if (input.left) localPaddleX += localPSpeed * dt;
 			} else {
-				if (rightPressed) localPaddleX += localPSpeed * dt;
-				if (leftPressed) localPaddleX -= localPSpeed * dt;
+				if (input.right) localPaddleX += localPSpeed * dt;
+				if (input.left) localPaddleX -= localPSpeed * dt;
 			}
 			localPaddleX = Math.max(34, Math.min(maxX, localPaddleX));
 
