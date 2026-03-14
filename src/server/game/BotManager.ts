@@ -86,6 +86,7 @@ export class BotManager {
 		this.botSessions.add(sessionId);
 
 		ballManager.spawnBall(sessionId, paddle);
+        ballManager.releaseBall(sessionId);
 
 		return sessionId;
 	}

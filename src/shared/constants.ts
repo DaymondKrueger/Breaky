@@ -13,8 +13,8 @@ export const BALL_WIDTH = 28;
 export const BALL_HEIGHT = 28;
 
 // Default paddle width (scale.x may shrink it via shrinkray)
-export const PADDLE_WIDTH = 200;
-export const PADDLE_HEIGHT = 24;
+export const PADDLE_WIDTH = 180;
+export const PADDLE_HEIGHT = 32;
 
 // Blue team paddle top edge (paddle sits near bottom)
 export const BLUE_PADDLE_Y = HEIGHT - 85;

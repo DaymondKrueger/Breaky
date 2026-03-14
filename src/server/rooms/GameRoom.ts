@@ -10,7 +10,7 @@ const MIN_PLAYERS = 1;
 const COUNTDOWN_SECONDS = 5;
 
 interface JoinOptions  { name?: string; playerId?: string; }
-interface InputMessage { left: boolean; right: boolean; }
+interface InputMessage { left: boolean; right: boolean; releaseBall: boolean; }
 
 export class GameRoom extends Room<GameState> {
 	maxClients = 10;
@@ -20,7 +20,7 @@ export class GameRoom extends Room<GameState> {
 
 	private brickManager!: BrickManager;
 	private ballManager!: BallManager;
-	private paddleManager = new PaddleManager();
+	private paddleManager!: PaddleManager;
 	private botManager!: BotManager;
 
 	private countdownTimer: any = null;
@@ -30,6 +30,7 @@ export class GameRoom extends Room<GameState> {
 
 		this.brickManager = new BrickManager(this.state);
 		this.ballManager = new BallManager(this.state, this.brickManager);
+		this.paddleManager = new PaddleManager();
 		this.botManager = new BotManager(this.state, this.inputs);
 
 		this.onMessage<InputMessage>("input", (client, data) => {
@@ -81,7 +82,7 @@ export class GameRoom extends Room<GameState> {
 		paddle.isReady = false;
 
 		this.state.paddles.set(client.sessionId, paddle);
-		this.inputs.set(client.sessionId, { left: false, right: false });
+		this.inputs.set(client.sessionId, { left: false, right: false, releaseBall: false });
 
 		console.log(`[GameRoom] ${paddle.username} joined (team ${team}). Player ID of ${options.playerId}`);
 	}
@@ -169,8 +170,16 @@ export class GameRoom extends Room<GameState> {
 		this.botManager.updateBotInputs();
 
 		this.state.paddles.forEach((paddle, sessionId) => {
-			const input = this.inputs.get(sessionId) ?? { left: false, right: false };
+			const input = this.inputs.get(sessionId) ?? { left: false, right: false, releaseBall: false };
 			this.paddleManager.updatePaddle(paddle, input, dt);
+		});
+
+        // Release any balls for players pressing space
+		this.state.paddles.forEach((_paddle, sessionId) => {
+			const input = this.inputs.get(sessionId);
+			if (input?.releaseBall && this.ballManager.hasUnreleasedBall(sessionId)) {
+				this.ballManager.releaseBall(sessionId);
+			}
 		});
 
 		// updateAll returns ball IDs that left the field this tick.
@@ -190,6 +199,7 @@ export class GameRoom extends Room<GameState> {
 					ownerPaddle.multiballs--;
 				} else {
 					this.ballManager.spawnBall(ownerSessionId, ownerPaddle);
+                    if (this.botManager.isBot(ownerSessionId)) this.ballManager.releaseBall(ownerSessionId);
 				}
 			}
 		}

@@ -6,6 +6,7 @@ import * as C from "../../shared/constants";
 export class BallManager {
 	// Server-only: napalm state is never sent to clients
 	private ballNapalm = new Map<string, boolean>();
+	private ballReleased = new Map<string, boolean>(); // false = stuck, true = in play
 	private nextBallId = 0;
 
 	constructor(private state: GameState, private bricks: BrickManager) {}
@@ -14,18 +15,20 @@ export class BallManager {
 		const ballId = `ball_${this.nextBallId++}`;
 		const ball = new BallSchema();
 		ball.ownerSessionId = sessionId;
-		ball.x  = paddle.x + (C.PADDLE_WIDTH * paddle.scaleX) / 2;
-		ball.y  = paddle.team === 0 ? C.BLUE_PADDLE_Y - 200 : C.RED_PADDLE_Y + 200;
+		ball.x  = paddle.x + (C.PADDLE_WIDTH * paddle.scaleX) / 2 - C.BALL_WIDTH / 2;
+		ball.y  = paddle.team === 0 ? C.BLUE_PADDLE_Y - C.BALL_HEIGHT : C.RED_PADDLE_Y + C.PADDLE_HEIGHT;
 		ball.vX = 0;
-		ball.vY = paddle.team === 0 ? -5 : 5;
+		ball.vY = 0;
 		this.state.balls.set(ballId, ball);
 		this.ballNapalm.set(ballId, false);
+		this.ballReleased.set(ballId, false);
 		return ballId;
 	}
 
 	removeBall(ballId: string): void {
 		this.state.balls.delete(ballId);
 		this.ballNapalm.delete(ballId);
+		this.ballReleased.delete(ballId);
 	}
 
 	removeAllForSession(sessionId: string): void {
@@ -46,11 +49,39 @@ export class BallManager {
 		return toDestroy;
 	}
 
+	releaseBall(sessionId: string): void {
+		this.state.balls.forEach((ball, ballId) => {
+			if (ball.ownerSessionId !== sessionId) return;
+			if (this.ballReleased.get(ballId)) return;
+			const paddle = this.state.paddles.get(sessionId);
+			if (!paddle) return;
+			ball.vY = paddle.team === 0 ? -5 : 5;
+            ball.vX = Math.random() * 2 - 1; // -1 to 1
+			this.ballReleased.set(ballId, true);
+		});
+	}
+
+    hasUnreleasedBall(sessionId: string): boolean {
+		let found = false;
+		this.state.balls.forEach((ball, ballId) => {
+			if (ball.ownerSessionId === sessionId && !this.ballReleased.get(ballId)) found = true;
+		});
+		return found;
+	}
+
 	private updateBall(ballId: string, dt: number, broadcastShake: () => void): "ok" | "destroy" {
 		const ball = this.state.balls.get(ballId)!;
 		const ownerPaddle = this.state.paddles.get(ball.ownerSessionId);
 		const ownerTeam = ownerPaddle?.team ?? 0;
 		const napalm = this.ballNapalm.get(ballId) ?? false;
+
+        // Ball is stuck to the paddle
+		if (!this.ballReleased.get(ballId)) {
+			if (ownerPaddle) {
+				ball.x = ownerPaddle.x + (C.PADDLE_WIDTH * ownerPaddle.scaleX) / 2 - C.BALL_WIDTH / 2;
+			}
+			return "ok";
+		}
 
 		const callbacks: BallStepCallbacks = {
 			onBrickHit: (brickIndex: number) => {
@@ -74,7 +105,7 @@ export class BallManager {
 						break;
 					}
 					case BrickTypes.MYSTERY: {
-						const powerUps = [BrickTypes.NAPALM, BrickTypes.MULTIBALL, BrickTypes.TURBO, BrickTypes.SLOWMO, BrickTypes.INVERSION, BrickTypes.SHRINKRAY];
+						const powerUps = [BrickTypes.MULTIBALL];//[BrickTypes.NAPALM, BrickTypes.MULTIBALL, BrickTypes.TURBO, BrickTypes.SLOWMO, BrickTypes.INVERSION, BrickTypes.SHRINKRAY];
 						brick.brickType = powerUps[Math.floor(Math.random() * powerUps.length)];
 						break;
 					}
@@ -90,6 +121,7 @@ export class BallManager {
 					}
 					case BrickTypes.MULTIBALL: {
 						this.spawnBall(ball.ownerSessionId, ownerPaddle);
+                        this.releaseBall(ball.ownerSessionId);
 						ownerPaddle.multiballs++;
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;

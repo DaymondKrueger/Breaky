@@ -181,18 +181,20 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	let localInversion = false;
 	const PADDLE_SNAP_THRESHOLD = 120; // hard snap only for extreme desync
 
-    type InputAction = "left" | "right";
+    type InputAction = "left" | "right" | "releaseBall";
 
     const keyMap: Record<string, InputAction> = {
         ArrowRight: "right",
         KeyD: "right",
         ArrowLeft: "left",
-        KeyA: "left"
+        KeyA: "left",
+        Space: "releaseBall",
     };
 
     const input: Record<InputAction, boolean> = {
         left: false,
-        right: false
+        right: false,
+        releaseBall: false,
     };
 
     const sendInput = () => room.send("input", input);
