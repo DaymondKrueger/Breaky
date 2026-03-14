@@ -395,6 +395,20 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			const local = localBalls.get(ballId);
 			const server = serverBalls.get(ballId);
 			if (!local) return;
+ 
+			// Unreleased ball
+			if (local.vX === 0 && local.vY === 0) {
+				const isLocalBall = local.ownerSessionId === room.sessionId;
+                // Local ball, snap right to middle of client paddle
+				if (isLocalBall) {
+					cb.sprite.x = localPaddleX + (C.PADDLE_WIDTH * localScaleX) / 2 - C.BALL_WIDTH / 2;
+				} else if (server) {
+					// Remote ball, lerp to the remote owner paddle
+					cb.sprite.x += (server.x - cb.sprite.x) * 0.15;
+					cb.sprite.y += (server.y - cb.sprite.y) * 0.15;
+				}
+				return;
+			}
 
 			const ownerTeam = ballOwnerTeam.get(ballId) ?? 0;
 			const paddle = room.state.paddles.get(local.ownerSessionId) ?? null;

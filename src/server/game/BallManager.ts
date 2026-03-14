@@ -56,7 +56,7 @@ export class BallManager {
 			const paddle = this.state.paddles.get(sessionId);
 			if (!paddle) return;
 			ball.vY = paddle.team === 0 ? -5 : 5;
-            ball.vX = Math.random() * 2 - 1; // -1 to 1
+            ball.vX = Math.random() * 3 - 1.5; // -1.5 to 1.5
 			this.ballReleased.set(ballId, true);
 		});
 	}
