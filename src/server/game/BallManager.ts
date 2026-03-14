@@ -105,7 +105,7 @@ export class BallManager {
 						break;
 					}
 					case BrickTypes.MYSTERY: {
-						const powerUps = [BrickTypes.MULTIBALL];//[BrickTypes.NAPALM, BrickTypes.MULTIBALL, BrickTypes.TURBO, BrickTypes.SLOWMO, BrickTypes.INVERSION, BrickTypes.SHRINKRAY];
+						const powerUps = [BrickTypes.NAPALM, BrickTypes.MULTIBALL, BrickTypes.TURBO, BrickTypes.SLOWMO, BrickTypes.INVERSION, BrickTypes.SHRINKRAY];
 						brick.brickType = powerUps[Math.floor(Math.random() * powerUps.length)];
 						break;
 					}
