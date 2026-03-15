@@ -263,6 +263,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		} else {
 			paddleTargetX.set(sessionId, paddle.x);
 			paddle.listen("x", v => paddleTargetX.set(sessionId, v));
+            paddle.listen("scaleX", v => { cp.paddle.scale.x = v; });
 		}
 
 		paddle.listen("score", () => gs.leaderboard?.updateFromState(room.state));
