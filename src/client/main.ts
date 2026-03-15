@@ -99,7 +99,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		width: gs.WIDTH,
 		height: gs.HEIGHT,
 		backgroundAlpha: 0,
-		antialias: true,
+		antialias: false,
 		resolution: 1,
 	});
 	gs.app = app;
@@ -209,7 +209,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         input[action] = pressed;
         sendInput();
     }
-    
+
     window.addEventListener("touchstart", (e) => {
         const hasUnreleased = [...localBalls.values()].some(
             b => b.ownerSessionId === room.sessionId && b.vX === 0 && b.vY === 0
@@ -367,6 +367,10 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 	app.ticker.add((ticker) => {
 		const dt = ticker.deltaTime;
+
+        if (room.state.phase === "gameover") {
+            return;
+        }
 
         // Set paddle scale
 		const myPaddle = paddleObjects.get(room.sessionId);
