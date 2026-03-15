@@ -279,3 +279,68 @@ html, body {
         -webkit-touch-callout: none;
 	}
 }
+
+// Game over overlay
+#game-over {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 3;
+
+    .container {
+        position: absolute;
+        width: 691px;
+        height: 440px;
+        background-color: rgba(50, 50, 50);
+        border-radius: 4px;
+        top: 50%;
+        left: 50%;
+        margin-top: calc(-440px / 2);
+        margin-left: calc(-691px / 2);
+        padding: 20px;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        border-radius: 4px;
+
+        #title {
+            font-family: $font-title;
+            font-size: 28px;
+            letter-spacing: 1.1px;
+            color: $primary;
+            text-transform: uppercase;
+        }
+
+        #rematch-btn {
+            padding: 12px 48px;
+            background: $accent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+            box-shadow: 0 0 16px rgba(#EA496F, 0.3);
+
+            background-color: #EA496F;
+            border-radius: 4px;
+            font-family: $font-title;
+            font-size: 19px;
+            letter-spacing: 1.1px;
+            color: white;
+
+            &:hover {
+                transform: scale(1.04);
+            }
+
+            &.ready {
+                background: #69f0ae;
+                box-shadow: 0 0 16px rgba(#69f0ae, 0.4);
+            }
+        }
+    }
+}

@@ -64,8 +64,8 @@ export class GameState extends Schema {
 	bricksPerLine: number = 0;
 	blueHealth: number = 100;
 	redHealth: number = 100;
-	minutes: number = 5;
-	seconds: number = 0;
+	minutes: number = 0;
+	seconds: number = 10;
 	// "lobby" | "countdown" | "playing" | "gameover"
 	phase: string = "lobby";
 	countdownSeconds: number = 5;

@@ -365,10 +365,14 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const LERP_REMOTE = 0.25;
 	let lastSecond = 0;
 
+	const gameOver = document.getElementById("game-over")!;
+
 	app.ticker.add((ticker) => {
 		const dt = ticker.deltaTime;
 
         if (room.state.phase === "gameover") {
+			gameOver.style.display = "flex";
+            gameOver.style.opacity = "1";
             return;
         }
 
