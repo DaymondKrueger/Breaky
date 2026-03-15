@@ -209,16 +209,32 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         input[action] = pressed;
         sendInput();
     }
+    
+    window.addEventListener("touchstart", (e) => {
+        const hasUnreleased = [...localBalls.values()].some(
+            b => b.ownerSessionId === room.sessionId && b.vX === 0 && b.vY === 0
+        );
 
-	// window.addEventListener("touchstart", (e) => {
-	// 	leftPressed  = e.touches[0].pageX / window.innerWidth < 0.5;
-	// 	rightPressed = !leftPressed;
-	// 	sendInput();
-	// }, true);
-	// window.addEventListener("touchend", () => {
-	// 	leftPressed = rightPressed = false;
-	// 	sendInput();
-	// }, true);
+        if (hasUnreleased) {
+            input.releaseBall = true;
+            sendInput();
+            return;
+        }
+
+        input.left  = e.touches[0].pageX / window.innerWidth < 0.5;
+        input.right = !input.left;
+        sendInput();
+    }, true);
+
+    window.addEventListener("touchend", () => {
+        input.left = input.right = input.releaseBall = false;
+        sendInput();
+    }, true);
+
+    // Prevent long-press highlight on the canvas
+    const canvas = app.canvas as HTMLCanvasElement;
+    canvas.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+    canvas.addEventListener("touchmove",  (e) => e.preventDefault(), { passive: false });
 
 	// Schema listeners: bricks
 	room.state.bricks.onAdd((brick, index) => {

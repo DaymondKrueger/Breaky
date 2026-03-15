@@ -275,5 +275,7 @@ html, body {
 
 	canvas {
 		display: block;
+        touch-action: none;
+        -webkit-touch-callout: none;
 	}
 }
