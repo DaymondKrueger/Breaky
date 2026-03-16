@@ -278,6 +278,16 @@ html, body {
         touch-action: none;
         -webkit-touch-callout: none;
 	}
+
+    #hud-fps {
+        position: fixed;
+        top: 10px;
+        left: 30px;
+        color: white;
+        font-family: $font-main;
+        font-size: 36px;
+        text-shadow: 2px 2px 2px #000000;
+    }
 }
 
 // Game over overlay

@@ -93,6 +93,8 @@ function initMapVisuals(): void {
 	}
 }
 
+const gameContainer = document.getElementById("game-container")!;
+
 export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const app = new Application();
 	await app.init({
@@ -103,7 +105,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		resolution: 1,
 	});
 	gs.app = app;
-	document.body.appendChild(app.canvas as HTMLCanvasElement);
+	gameContainer.prepend(app.canvas as HTMLCanvasElement);
 
 	gs.camera = new Container();
 	gs.HUD = new Container();
@@ -116,11 +118,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	initMapVisuals();
 
 	gs.leaderboard = new Leaderboard(gs.WIDTH - 226, 20);
-
-	const fpsStyle = new TextStyle({ fontFamily: "Arial", fontSize: 36, fill: "#ffffff", stroke: { color: "#000000", width: 4 } });
-	const fpsText = new Text({ text: "", style: fpsStyle });
-	fpsText.x = 10; fpsText.y = 10;
-	gs.HUD.addChild(fpsText);
 
 	const ua = navigator.userAgent.toLowerCase();
 	const isMobile = ua.includes("mobile") || ua.includes("android");
@@ -135,7 +132,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		gs.HUD.addChild(rArrow);
 	}
 
-	// Lobby overlay elements
+	// HTML elements
 	const mainMenu = document.getElementById("main-menu")!;
 	const lobbyContent = document.getElementById("lobby-content")!;
 	const lobbyPlayerList = document.getElementById("lobby-player-list")!;
@@ -146,6 +143,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const gameOverReason = document.getElementById("game-over-reason")!;
 	const rematchBtn = document.getElementById("rematch-btn")!;
 	const rematchStatus = document.getElementById("rematch-status")!;
+    const hudFPS = document.getElementById("hud-fps")!;
 
 	let isReady = false;
 	let hasVotedRematch = false;
@@ -534,7 +532,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		const now = Date.now();
 		if (now - lastSecond > 1000) {
 			lastSecond = now;
-			fpsText.text = `FPS: ${Math.round(app.ticker.FPS)}`;
+            hudFPS.textContent = `FPS: ${Math.round(app.ticker.FPS)}`;
 		}
 	});
 }
