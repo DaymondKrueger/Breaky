@@ -141,8 +141,12 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const lobbyPlayerList = document.getElementById("lobby-player-list")!;
 	const readyBtn = document.getElementById("ready-btn")!;
 	const countdownEl = document.getElementById("lobby-countdown")!;
+	const gameOver = document.getElementById("game-over")!;
+	const rematchBtn = document.getElementById("rematch-btn")!;
+	const rematchStatus = document.getElementById("rematch-status")!;
 
 	let isReady = false;
+	let hasVotedRematch = false;
 
 	readyBtn.addEventListener("click", () => {
 		isReady = !isReady;
@@ -242,6 +246,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		brickObjects.set(index, cb);
 		brick.listen("brickType", () => cb.update(brick));
 		brick.listen("health", () => cb.update(brick));
+	});
+ 
+	room.state.bricks.onRemove((_brick, index) => {
+		brickObjects.get(index)?.destroy();
+		brickObjects.delete(index);
 	});
 
 	// Schema listeners: paddles
@@ -343,15 +352,60 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	// Phase changes
 	room.state.listen("phase", (phase) => {
 		if (phase === "countdown" || phase === "lobby") {
+			// If coming back from gameover (rematch), hide game-over overlay and reset button. Bring back main-menu for lobby UI
+			if (gameOver.style.display !== "none") {
+				gameOver.style.opacity = "0";
+				setTimeout(() => { gameOver.style.display = "none"; }, 400);
+				hasVotedRematch = false;
+				rematchBtn.textContent = "Rematch";
+				rematchBtn.classList.remove("ready");
+				rematchStatus.textContent = "";
+                mainMenu.style.display = "flex";
+                mainMenu.style.opacity = "1";
+			}
 			lobbyContent.style.display = "flex";
             lobbyContent.style.opacity = "1";
 			countdownEl.style.display = phase === "countdown" ? "block" : "none";
 			readyBtn.style.display = phase === "lobby" ? "block" : "none";
-		} else {
+			// Reset local ready state if returning to lobby from gameover
+			if (phase === "lobby") {
+				isReady = false;
+				readyBtn.textContent = "Ready up!";
+				readyBtn.classList.remove("ready");
+			}
+		} else if (phase === "playing") {
 			mainMenu.style.opacity = "0";
 			setTimeout(() => (mainMenu.style.display = "none"), 400);
+		} else if (phase === "gameover") {
+			gameOver.style.display = "flex";
+			// Trigger CSS transition on next frame
+			requestAnimationFrame(() => { gameOver.style.opacity = "1"; });
+			updateRematchStatus();
 		}
 	});
+ 
+	rematchBtn.addEventListener("click", () => {
+		hasVotedRematch = !hasVotedRematch;
+		if (hasVotedRematch) {
+			room.send("rematch");
+			rematchBtn.textContent = "Cancel";
+			rematchBtn.classList.add("ready");
+		} else {
+			room.send("unrematch");
+			rematchBtn.textContent = "Rematch";
+			rematchBtn.classList.remove("ready");
+		}
+	});
+ 
+	const updateRematchStatus = () => {
+		if (room.state.phase !== "gameover") return;
+		let totalReal = 0;
+		room.state.paddles.forEach(() => { totalReal++; });
+		const count = room.state.rematchCount;
+		rematchStatus.textContent = count > 0 ? `${count} / ${totalReal} players rematching...` : "";
+	};
+ 
+	room.state.listen("rematchCount", () => updateRematchStatus());
 
 	room.state.listen("countdownSeconds", (v) => {
 		countdownEl.textContent = String(v);
@@ -365,16 +419,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const LERP_REMOTE = 0.25;
 	let lastSecond = 0;
 
-	const gameOver = document.getElementById("game-over")!;
-
 	app.ticker.add((ticker) => {
 		const dt = ticker.deltaTime;
-
-        if (room.state.phase === "gameover") {
-			gameOver.style.display = "flex";
-            gameOver.style.opacity = "1";
-            return;
-        }
 
         // Set paddle scale
 		const myPaddle = paddleObjects.get(room.sessionId);

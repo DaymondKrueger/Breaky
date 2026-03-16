@@ -342,5 +342,12 @@ html, body {
                 box-shadow: 0 0 16px rgba(#69f0ae, 0.4);
             }
         }
+ 
+        #rematch-status {
+            font-family: $font-main;
+            font-size: 15px;
+            color: $accent;
+            margin: 0;
+        }
     }
 }

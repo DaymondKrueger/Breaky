@@ -51,6 +51,10 @@ export class BrickManager {
 		}
 	}
 
+    clearMap(): void {
+		this.state.bricks.splice(0, this.state.bricks.length);
+	}
+
 	ownBrick(brick: BrickSchema, ownerSessionId: string): void {
 		if (brick.brickType === 4) return;
 		const paddle = this.state.paddles.get(ownerSessionId);

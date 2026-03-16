@@ -39,6 +39,12 @@ export class BallManager {
 		for (const ballId of toRemove) this.removeBall(ballId);
 	}
 
+    removeAll(): void {
+		const toRemove: string[] = [];
+		this.state.balls.forEach((_ball, ballId) => toRemove.push(ballId));
+		for (const ballId of toRemove) this.removeBall(ballId);
+	}
+
 	updateAll(dt: number, broadcastShake: () => void): string[] {
 		const toDestroy: string[] = [];
 		this.state.balls.forEach((_ball, ballId) => {

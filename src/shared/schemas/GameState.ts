@@ -69,6 +69,7 @@ export class GameState extends Schema {
 	// "lobby" | "countdown" | "playing" | "gameover"
 	phase: string = "lobby";
 	countdownSeconds: number = 5;
+	rematchCount: number = 0;
 }
 defineTypes(GameState, {
 	paddles: { map: PaddleSchema },
@@ -81,4 +82,5 @@ defineTypes(GameState, {
 	seconds: "number",
 	phase: "string",
 	countdownSeconds: "number",
+    rematchCount: "number",
 });

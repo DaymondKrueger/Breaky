@@ -24,6 +24,7 @@ export class GameRoom extends Room<GameState> {
 	private botManager!: BotManager;
 
 	private countdownTimer: any = null;
+	private rematchVotes = new Set<string>();
 
 	onCreate(_options: any) {
 		this.setState(new GameState());
@@ -49,6 +50,19 @@ export class GameRoom extends Room<GameState> {
 			if (this.state.phase !== "lobby") return;
 			const paddle = this.state.paddles.get(client.sessionId);
 			if (paddle) paddle.isReady = false;
+		});
+ 
+		this.onMessage("rematch", (client) => {
+			if (this.state.phase !== "gameover") return;
+			this.rematchVotes.add(client.sessionId);
+			this.state.rematchCount = this.rematchVotes.size;
+			this.checkAllRematch();
+		});
+ 
+		this.onMessage("unrematch", (client) => {
+			if (this.state.phase !== "gameover") return;
+			this.rematchVotes.delete(client.sessionId);
+			this.state.rematchCount = this.rematchVotes.size;
 		});
 
 		this.setSimulationInterval((dt) => this.update(dt), 1000 / this.TICK_RATE);
@@ -101,6 +115,10 @@ export class GameRoom extends Room<GameState> {
 		} else if (this.state.phase === "playing") {
 			// Mid-game: add a bot so that team isn't shorthanded.
 			this.botManager.replaceLeavingPlayer(leavingTeam, this.ballManager);
+		} else if (this.state.phase === "gameover") {
+			// Remove their rematch vote and update count.
+			this.rematchVotes.delete(client.sessionId);
+			this.state.rematchCount = this.rematchVotes.size;
 		}
 
 		console.log(`[GameRoom] ${client.sessionId} left.`);
@@ -146,6 +164,47 @@ export class GameRoom extends Room<GameState> {
 		this.state.countdownSeconds = COUNTDOWN_SECONDS;
 		this.state.paddles.forEach((p) => { p.isReady = false; });
 		this.unlock();
+	}
+ 
+	private checkAllRematch(): void {
+		let realCount = 0;
+		this.state.paddles.forEach((_p, sid) => {
+			if (!this.botManager.isBot(sid)) realCount++;
+		});
+		if (realCount > 0 && this.rematchVotes.size >= realCount) {
+			this.resetGame();
+		}
+	}
+ 
+	private resetGame(): void {
+		// Clear votes
+		this.rematchVotes.clear();
+		this.state.rematchCount = 0;
+ 
+		// Remove all balls and bricks
+		this.ballManager.removeAll();
+		this.brickManager.clearMap();
+ 
+		// Reset health and timer
+		this.state.blueHealth = 100;
+		this.state.redHealth = 100;
+		this.state.minutes = 0;
+		this.state.seconds = 10;
+ 
+		// Reset paddle ready states and reposition
+		this.state.paddles.forEach((paddle) => {
+			paddle.isReady = false;
+			paddle.score = 0;
+			paddle.x = 200 + Math.random() * (C.MAP_WIDTH - 600);
+			paddle.scaleX = 1;
+			paddle.pSpeed = 14.16;
+			paddle.inversionEffect = false;
+			paddle.multiballs = 0;
+		});
+ 
+		this.state.phase = "lobby";
+		this.unlock();
+		console.log(`[GameRoom] Rematch! Room ${this.roomId} reset to lobby.`);
 	}
 
 	private startGame(): void {
