@@ -309,12 +309,19 @@ html, body {
         gap: 20px;
         border-radius: 4px;
 
-        #title {
+        #game-over-title {
             font-family: $font-title;
             font-size: 28px;
             letter-spacing: 1.1px;
             color: $primary;
             text-transform: uppercase;
+        }
+ 
+        #game-over-reason {
+            font-family: $font-main;
+            font-size: 17px;
+            color: $accent;
+            margin: 0;
         }
 
         #rematch-btn {

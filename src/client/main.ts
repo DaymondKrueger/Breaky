@@ -142,6 +142,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const readyBtn = document.getElementById("ready-btn")!;
 	const countdownEl = document.getElementById("lobby-countdown")!;
 	const gameOver = document.getElementById("game-over")!;
+	const gameOverTitle = document.getElementById("game-over-title")!;
+	const gameOverReason = document.getElementById("game-over-reason")!;
 	const rematchBtn = document.getElementById("rematch-btn")!;
 	const rematchStatus = document.getElementById("rematch-status")!;
 
@@ -257,6 +259,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const updateLobbyList = () => {
 		lobbyPlayerList.innerHTML = "";
 		room.state.paddles.forEach((p, sid) => {
+			if (sid.startsWith("bot_")) return;
 			const li = document.createElement("li");
 			const teamLabel = p.team === 0 ? "🔵" : "🔴";
 			li.textContent = `${teamLabel} ${p.username} ${p.isReady ? "✓" : "..."}`;
@@ -377,8 +380,17 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			mainMenu.style.opacity = "0";
 			setTimeout(() => (mainMenu.style.display = "none"), 400);
 		} else if (phase === "gameover") {
+			const blue = room.state.blueHealth;
+			const red = room.state.redHealth;
+			if (blue > red) {
+				gameOverTitle.textContent = "Blue Team Wins!";
+			} else if (red > blue) {
+				gameOverTitle.textContent = "Red Team Wins!";
+			} else {
+				gameOverTitle.textContent = "Draw!";
+			}
+			gameOverReason.textContent = room.state.gameOverReason === "time" ? "Time ran out" : "A team ran out of health";
 			gameOver.style.display = "flex";
-			// Trigger CSS transition on next frame
 			requestAnimationFrame(() => { gameOver.style.opacity = "1"; });
 			updateRematchStatus();
 		}

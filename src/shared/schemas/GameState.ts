@@ -63,13 +63,14 @@ export class GameState extends Schema {
 	bricks = new ArraySchema<BrickSchema>();
 	bricksPerLine: number = 0;
 	blueHealth: number = 100;
-	redHealth: number = 100;
+	redHealth: number = 90;
 	minutes: number = 0;
-	seconds: number = 10;
+	seconds: number = 5;
 	// "lobby" | "countdown" | "playing" | "gameover"
 	phase: string = "lobby";
 	countdownSeconds: number = 5;
 	rematchCount: number = 0;
+	gameOverReason: string = "";
 }
 defineTypes(GameState, {
 	paddles: { map: PaddleSchema },
@@ -83,4 +84,5 @@ defineTypes(GameState, {
 	phase: "string",
 	countdownSeconds: "number",
     rematchCount: "number",
+	gameOverReason: "string",
 });

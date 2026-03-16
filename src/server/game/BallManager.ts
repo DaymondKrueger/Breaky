@@ -168,11 +168,19 @@ export class BallManager {
 		if (result === "destroy") {
 			if (ownerPaddle) {
 				if (ball.y <= C.GOAL_TOP && ownerPaddle.team === 0) {
-					ownerPaddle.score   += 20;
+					ownerPaddle.score += 20;
 					this.state.redHealth = Math.max(0, this.state.redHealth - 5);
+					if (this.state.redHealth <= 0) {
+						this.state.gameOverReason = "health";
+						this.state.phase = "gameover";
+					}
 				} else if (ball.y >= C.GOAL_BOTTOM && ownerPaddle.team === 1) {
-					ownerPaddle.score    += 20;
+					ownerPaddle.score += 20;
 					this.state.blueHealth = Math.max(0, this.state.blueHealth - 5);
+					if (this.state.blueHealth <= 0) {
+						this.state.gameOverReason = "health";
+						this.state.phase = "gameover";
+					}
 				}
 			}
 		}

@@ -15,6 +15,14 @@ export class BotManager {
 	isBot(sessionId: string): boolean {
 		return this.botSessions.has(sessionId);
 	}
+ 
+	removeAllBots(): void {
+		this.botSessions.forEach((sessionId) => {
+			this.state.paddles.delete(sessionId);
+			this.inputs.delete(sessionId);
+		});
+		this.botSessions.clear();
+	}
 
 	/**
 	 * Called once at game start.

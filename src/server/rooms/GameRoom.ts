@@ -180,6 +180,9 @@ export class GameRoom extends Room<GameState> {
 		// Clear votes
 		this.rematchVotes.clear();
 		this.state.rematchCount = 0;
+        
+        // Remove bots
+        this.botManager.removeAllBots();
  
 		// Remove all balls and bricks
 		this.ballManager.removeAll();
@@ -188,8 +191,8 @@ export class GameRoom extends Room<GameState> {
 		// Reset health and timer
 		this.state.blueHealth = 100;
 		this.state.redHealth = 100;
-		this.state.minutes = 0;
-		this.state.seconds = 10;
+		this.state.minutes = 5;
+		this.state.seconds = 0;
  
 		// Reset paddle ready states and reposition
 		this.state.paddles.forEach((paddle) => {
@@ -203,6 +206,7 @@ export class GameRoom extends Room<GameState> {
 		});
  
 		this.state.phase = "lobby";
+		this.state.gameOverReason = "";
 		this.unlock();
 		console.log(`[GameRoom] Rematch! Room ${this.roomId} reset to lobby.`);
 	}
@@ -270,6 +274,7 @@ export class GameRoom extends Room<GameState> {
 			this.state.minutes--;
 			this.state.seconds = 59;
 		} else if (this.state.seconds <= 0 && this.state.minutes === 0) {
+			this.state.gameOverReason = "time";
 			this.state.phase = "gameover";
 			console.log(`[GameRoom] Game over in room ${this.roomId}.`);
 		} else {
