@@ -117,7 +117,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	await loadAssets();
 	initMapVisuals();
 
-	gs.leaderboard = new Leaderboard(gs.WIDTH - 226, 20);
+	gs.leaderboard = new Leaderboard();
 
 	const ua = navigator.userAgent.toLowerCase();
 	const isMobile = ua.includes("mobile") || ua.includes("android");

@@ -275,8 +275,7 @@ html, body {
 #game-container {
 	position: fixed;
 	inset: 0;
-	// z-index: 0;
-    z-index: 999;
+	z-index: 0;
 
 	canvas {
 		display: block;
@@ -332,6 +331,8 @@ html, body {
                 }
 
                 .health-bar-container {
+                    width: 152px;
+
                     .top {
                         display: flex;
                         flex-direction: row;
@@ -340,7 +341,6 @@ html, body {
                     }
 
                     .bar-fill {
-                        width: 152px;
                         height: 6px;
                         margin-top: 2px;
                         border-radius: 12px;
@@ -360,6 +360,14 @@ html, body {
                     display: flex;
                     flex-direction: column;
                     text-transform: none;
+
+                    .blue {
+                        color: $blue-tint;
+                    }
+
+                    .red {
+                        color: $red-tint;
+                    }
 
                     .score-container {
                         display: flex;
