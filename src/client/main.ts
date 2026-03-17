@@ -29,29 +29,33 @@ export function screenShake(app: Application, intensity = 15, duration = 500): v
 }
 
 function resize(app: Application): void {
-	const ratio = gs.WIDTH / gs.HEIGHT;
-	let w: number, h: number;
-	if (window.innerWidth / window.innerHeight >= ratio) {
-		w = window.innerHeight * ratio;
-		h = window.innerHeight;
-	} else {
-		w = window.innerWidth;
-		h = window.innerWidth / ratio;
-	}
-	const canvas = app.canvas as HTMLCanvasElement;
-	canvas.style.width = `${w}px`;
-	canvas.style.height = `${h}px`;
-	canvas.style.position = "absolute";
-	canvas.style.left = "50%";
-	canvas.style.top = "50%";
-	canvas.style.transform = "translate3d(-50%, -50%, 0)";
+    const scaleY = window.innerHeight / gs.HEIGHT;
+    const scaleX = window.innerWidth / gs.WIDTH;
+    
+    // Use height scale as base but allow wider canvas
+    const scale = scaleY;
+    
+    // How many game units wide can we actually show?
+    const visibleWidth = window.innerWidth / scale;
+    
+    // Resize the actual PIXI renderer to the new logical size
+    app.renderer.resize(visibleWidth, gs.HEIGHT);
+    
+    // Scale the canvas element to fill the screen
+    const canvas = app.canvas as HTMLCanvasElement;
+    canvas.style.width = `${window.innerWidth}px`;
+    canvas.style.height = `${window.innerHeight}px`;
+    canvas.style.position = "absolute";
+    canvas.style.left = "0";
+    canvas.style.top = "0";
+    canvas.style.transform = "none";
 }
 
-function cullOffScreen(children: any[]): void {
+function cullOffScreen(children: any[], viewW: number, viewH: number): void {
 	for (const child of children) {
 		const pos = child.toGlobal(new Point(0, 0));
-		child.renderable = pos.x >= -512 && pos.y >= -32 && pos.x <= gs.WIDTH && pos.y <= gs.HEIGHT;
-		if (child.children?.length > 0) cullOffScreen(child.children);
+		child.renderable = pos.x >= -512 && pos.y >= -32 && pos.x <= viewW && pos.y <= viewH;
+		if (child.children?.length > 0) cullOffScreen(child.children, viewW, viewH);
 	}
 }
 
@@ -127,8 +131,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		lArrow.x = 30; lArrow.y = gs.HEIGHT / 2 - lArrow.height / 2;
 		gs.HUD.addChild(lArrow);
 		const rArrow = new Sprite(Texture.from("mobileArrow"));
-		rArrow.anchor.set(1, 0);
-		rArrow.x = gs.WIDTH - 30; rArrow.y = gs.HEIGHT / 2 - rArrow.height / 2;
+        rArrow.anchor.set(1, 0);
+        rArrow.x = app.renderer.width - 30;
+        rArrow.y = app.renderer.height / 2 - rArrow.height / 2;
 		gs.HUD.addChild(rArrow);
 	}
 
@@ -522,12 +527,13 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		// Camera follows local paddle
 		const mySchema = room.state.paddles.get(room.sessionId);
 		if (mySchema) {
-			const target = localPaddleX - gs.WIDTH / 2 + (C.PADDLE_WIDTH * localScaleX) / 2;
-			gs.camera.pivot.x += (target - gs.camera.pivot.x) / 20;
-			gs.camera.pivot.x = Math.max(0, Math.min(gs.MAP_WIDTH - gs.WIDTH, gs.camera.pivot.x));
+			const viewW = app.renderer.width;
+            const target = localPaddleX - viewW / 2 + (C.PADDLE_WIDTH * localScaleX) / 2;
+            gs.camera.pivot.x += (target - gs.camera.pivot.x) / 20;
+            gs.camera.pivot.x = Math.max(0, Math.min(gs.MAP_WIDTH - viewW, gs.camera.pivot.x));
 		}
 
-		cullOffScreen(gs.camera.children);
+		cullOffScreen(gs.camera.children, app.renderer.width, app.renderer.height);
 
 		const now = Date.now();
 		if (now - lastSecond > 1000) {
