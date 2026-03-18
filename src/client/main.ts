@@ -53,6 +53,7 @@ function resize(app: Application): void {
 
 function cullOffScreen(children: any[], viewW: number, viewH: number): void {
 	for (const child of children) {
+		if (child.label === "noCull") continue;
 		const pos = child.toGlobal(new Point(0, 0));
 		child.renderable = pos.x >= -512 && pos.y >= -32 && pos.x <= viewW && pos.y <= viewH;
 		if (child.children?.length > 0) cullOffScreen(child.children, viewW, viewH);
@@ -504,6 +505,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 					cb.sprite.x += (server.x - cb.sprite.x) * 0.15;
 					cb.sprite.y += (server.y - cb.sprite.y) * 0.15;
 				}
+				// Update trail even while held (stationary emission keeps the glow at rest)
+				// cb.trail.update(cb.sprite.x, cb.sprite.y, C.BALL_WIDTH, C.BALL_WIDTH, dt);
 				return;
 			}
 
@@ -533,6 +536,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 			cb.sprite.x = local.x;
 			cb.sprite.y = local.y;
+
+			// Update the ball particle trail at the final resolved position
+			cb.trail.update(cb.sprite.x, cb.sprite.y, C.BALL_WIDTH, C.BALL_WIDTH, dt);
 		});
 
 		// Camera follows local paddle

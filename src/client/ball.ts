@@ -1,9 +1,11 @@
 import { Sprite, Texture } from "pixi.js";
 import { gs } from "./state";
+import { BallTrail } from "./ballTrail";
 import type { BallSchema } from "../shared/schemas/GameState";
 
 export class ClientBall {
 	sprite: Sprite;
+	trail:  BallTrail;
 
 	// ownerTeam and isLocal determine rendering (tint, alpha)
 	constructor(schema: BallSchema, isLocal: boolean, isTeammate: boolean, ownerTeam: number) {
@@ -19,11 +21,15 @@ export class ClientBall {
 			this.sprite.alpha = 0.6;
 			this.sprite.tint = ownerTeam === 1 ? gs.RED_TINT : gs.BLUE_TINT;
 		}
+        
+		// Trail colour follows the owner's team: team 0 = blue, team 1 = red
+		this.trail = new BallTrail(ownerTeam === 0 ? "blue" : "red");
 
 		gs.camera.addChild(this.sprite);
 	}
 
 	destroy(): void {
+		this.trail.destroy();
 		gs.camera.removeChild(this.sprite);
 		this.sprite.destroy();
 	}
