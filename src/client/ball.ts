@@ -9,6 +9,8 @@ export class ClientBall {
 	constructor(schema: BallSchema, isLocal: boolean, isTeammate: boolean, ownerTeam: number) {
 		this.sprite = new Sprite(Texture.from("playerBall"));
 		this.sprite.position.set(schema.x, schema.y);
+        
+		if (gs.isFlipped) { this.sprite.scale.y = -1; this.sprite.anchor.y = 1; }
 
 		if (!isLocal && isTeammate) {
 			this.sprite.alpha = 0.6;

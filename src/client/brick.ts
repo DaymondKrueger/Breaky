@@ -8,6 +8,7 @@ export class ClientBrick {
 	constructor(schema: BrickSchema) {
 		this.sprite = new Sprite(this.textureFor(schema));
 		this.sprite.position.set(schema.x, schema.y);
+		if (gs.isFlipped) { this.sprite.scale.y = -1; this.sprite.anchor.y = 1; }
 		this.applyTint(schema);
 		gs.camera.addChild(this.sprite);
 	}

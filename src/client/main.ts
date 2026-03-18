@@ -59,7 +59,7 @@ function cullOffScreen(children: any[], viewW: number, viewH: number): void {
 	}
 }
 
-function initMapVisuals(): void {
+function initMapVisuals(isFlipped: boolean): void {
 	const { WIDTH, HEIGHT, MAP_WIDTH } = gs;
 	const num = Math.ceil((HEIGHT - 112) / 64);
 	const bgH = Math.round((HEIGHT - 112) / num);
@@ -68,6 +68,7 @@ function initMapVisuals(): void {
 			const bg = new Sprite(Texture.from("bgPattern"));
 			bg.height = bgH; bg.width = bgH;
 			bg.position.set(x * bgH, 56 + y * bgH);
+			if (isFlipped) { bg.scale.y = -1; bg.anchor.y = 1; }
 			gs.camera.addChild(bg);
 		}
 	}
@@ -93,6 +94,7 @@ function initMapVisuals(): void {
 	for (let i = 0; i < Math.round((MAP_WIDTH - 60) / 32); i++) {
 		const hl = new Sprite(Texture.from("halfLineMid"));
 		hl.position.set(30 + i * 32, HEIGHT / 2 - hl.height / 2);
+		if (isFlipped) { hl.scale.y = -1; hl.anchor.y = 1; }
 		gs.camera.addChild(hl);
 	}
 }
@@ -119,7 +121,16 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	gs.HUD.interactiveChildren = false;
 
 	await loadAssets();
-	initMapVisuals();
+    
+	const localPaddleSchema = room.state.paddles.get(room.sessionId);
+	if (localPaddleSchema?.team === 1) {
+		gs.isFlipped = true;
+		gs.camera.scale.y = -1;
+		gs.camera.pivot.y = gs.HEIGHT / 2;
+		gs.camera.y = gs.HEIGHT / 2;
+	}
+
+	initMapVisuals(gs.isFlipped);
 
 	gs.leaderboard = new Leaderboard();
 

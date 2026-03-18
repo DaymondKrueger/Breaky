@@ -29,6 +29,11 @@ export class ClientPaddle {
 			this.usernameText.y = gs.HEIGHT - 85 + 46;
 		}
 
+        if (gs.isFlipped) {
+			this.usernameText.scale.y = -1;
+			this.usernameText.anchor.y = 1;
+		}
+
 		if (!isLocal) this.paddle.alpha = 0.6;
 
 		gs.camera.addChild(this.usernameText);

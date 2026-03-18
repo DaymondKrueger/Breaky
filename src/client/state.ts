@@ -16,4 +16,7 @@ export const gs = {
 	BLUE_TINT: 0x61EAFF as number,
 
 	leaderboard: null as any,
+
+	// For local red player
+	isFlipped: false,
 };
