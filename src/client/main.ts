@@ -160,7 +160,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const gameOverReason = document.getElementById("game-over-reason")!;
 	const rematchBtn = document.getElementById("rematch-btn")!;
 	const rematchStatus = document.getElementById("rematch-status")!;
-    const hudFPS = document.getElementById("hud-fps")!;
+    const hudPing = document.getElementById("hud-ping")!;
 
 	let isReady = false;
 	let hasVotedRematch = false;
@@ -360,6 +360,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 	// Server messages
 	room.onMessage("shake", () => screenShake(app));
+	room.onMessage("pong", () => { hudPing.textContent = `Ping: ${Date.now() - pingStart}ms`; });
 
 	// Leaderboard state listeners
 	room.state.listen("blueHealth", () => gs.leaderboard?.updateFromState(room.state));
@@ -445,6 +446,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	// Render loop
 	const LERP_REMOTE = 0.25;
 	let lastSecond = 0;
+	let pingStart = 0;
 
 	app.ticker.add((ticker) => {
 		const dt = ticker.deltaTime;
@@ -555,7 +557,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		const now = Date.now();
 		if (now - lastSecond > 1000) {
 			lastSecond = now;
-            hudFPS.textContent = `FPS: ${Math.round(app.ticker.FPS)}`;
+			pingStart = now;
+			room.send("ping");
 		}
 	});
 }

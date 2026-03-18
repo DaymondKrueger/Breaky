@@ -65,6 +65,10 @@ export class GameRoom extends Room<GameState> {
 			this.state.rematchCount = this.rematchVotes.size;
 		});
 
+        this.onMessage("ping", (client) => {
+			client.send("pong");
+		});
+
 		this.setSimulationInterval((dt) => this.update(dt), 1000 / this.TICK_RATE);
 		console.log(`[GameRoom] Room ${this.roomId} created.`);
 	}

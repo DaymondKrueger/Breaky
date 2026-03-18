@@ -283,13 +283,13 @@ html, body {
         -webkit-touch-callout: none;
 	}
 
-    #hud-fps {
+    #hud-ping {
         position: fixed;
         top: 10px;
         left: 30px;
         color: white;
         font-family: $font-main;
-        font-size: 36px;
+        font-size: 26px;
         text-shadow: 2px 2px 2px #000000;
     }
 
