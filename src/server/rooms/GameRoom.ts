@@ -101,6 +101,7 @@ export class GameRoom extends Room<GameState> {
 
 		const paddle = new PaddleSchema();
 		paddle.username = options.name ?? `Guest_${client.sessionId.slice(0, 4)}`;
+        paddle.playerId = options.playerId!;
 		paddle.team = team;
 		paddle.x = 200 + Math.random() * (C.MAP_WIDTH - 600);
 		paddle.isReady = false;

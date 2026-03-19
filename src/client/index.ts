@@ -20,14 +20,16 @@ document.getElementById("play-game")!.addEventListener("click", async () => {
 		localStorage.setItem("breaky_player_id", playerId);
 	}
 
+    let room: Awaited<ReturnType<typeof client.joinOrCreate<GameState>>> | undefined;
     try {
-	    const room = await client.joinOrCreate<GameState>("game_room", { name: username, playerId: playerId });
+	    room = await client.joinOrCreate<GameState>("game_room", { name: username, playerId: playerId });
 
         console.log("Joined room:", room.id);
 
         // Pass room to initGame - all schema listeners are wired there
         await initGame(room);
     } catch (e) {
+        if (room) { try { room.leave(); } catch (_) { window.location.reload(); return; } }
         menuContent.style.opacity = "1";
         menuContent.style.display = "flex";
         clearTimeout(hideMenuContent);
