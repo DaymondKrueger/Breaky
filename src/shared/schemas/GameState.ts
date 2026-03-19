@@ -43,6 +43,9 @@ export class PaddleSchema extends Schema {
 	inversionEffect: boolean = false;
 	multiballs: number = 0;
 	isReady: boolean = false;
+	slowmoTimer: number = 0;
+	inversionTimer: number = 0;
+	shrinkrayTimer: number = 0;
 }
 defineTypes(PaddleSchema, {
 	x: "number",
@@ -55,6 +58,9 @@ defineTypes(PaddleSchema, {
 	inversionEffect: "boolean",
 	multiballs: "number",
 	isReady: "boolean",
+	slowmoTimer: "number",
+	inversionTimer: "number",
+	shrinkrayTimer: "number",
 });
 
 export class GameState extends Schema {

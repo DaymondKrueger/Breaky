@@ -161,6 +161,49 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const rematchBtn = document.getElementById("rematch-btn")!;
 	const rematchStatus = document.getElementById("rematch-status")!;
     const hudPing = document.getElementById("hud-ping")!;
+    const hudPowerups = document.getElementById("hud-powerups")!;
+
+    type TimedAbility = "slowmo" | "inversion" | "shrinkray";
+    const ABILITY_IMAGES: Record<TimedAbility, string> = {
+        slowmo: "res/bricks/ability_slowmo.png",
+        inversion: "res/bricks/ability_inversion.png",
+        shrinkray: "res/bricks/ability_shrink.png",
+    };
+    const ABILITY_LABELS: Record<TimedAbility, string> = {
+        slowmo: "slowmo",
+        inversion: "inversion",
+        shrinkray: "shrinkray",
+    };
+
+    function formatTimer(seconds: number): string {
+        const s = Math.max(0, Math.ceil(seconds));
+        return `0:${s.toString().padStart(2, "0")}`;
+    }
+
+    // Tracks live timer values so we can refresh the HUD
+    const abilityTimers: Record<TimedAbility, number> = { slowmo: 0, inversion: 0, shrinkray: 0 };
+
+    function refreshHudPowerups(): void {
+        hudPowerups.innerHTML = "";
+        let anyActive = false;
+        (Object.keys(abilityTimers) as TimedAbility[]).forEach((key) => {
+            const t = abilityTimers[key];
+            if (t <= 0) return;
+            anyActive = true;
+            const container = document.createElement("div");
+            container.className = "powerup-container";
+            const img = document.createElement("div");
+            img.className = "powerup-image";
+            img.style.backgroundImage = `url("${ABILITY_IMAGES[key]}")`;
+            const timer = document.createElement("div");
+            timer.className = "powerup-timer";
+            timer.textContent = formatTimer(t);
+            container.appendChild(img);
+            container.appendChild(timer);
+            hudPowerups.appendChild(container);
+        });
+        hudPowerups.style.opacity = anyActive ? "1" : "0";
+    }
 
 	let isReady = false;
 	let hasVotedRematch = false;
@@ -314,6 +357,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			paddle.listen("pSpeed", v => { localPSpeed = v; });
 			paddle.listen("scaleX", v => { localScaleX = v; });
 			paddle.listen("inversionEffect", v => { localInversion = v; });
+
+            // Sync timed ability timers to HUD
+			paddle.listen("slowmoTimer", v => { abilityTimers.slowmo = v; refreshHudPowerups(); });
+			paddle.listen("inversionTimer", v => { abilityTimers.inversion = v; refreshHudPowerups(); });
+			paddle.listen("shrinkrayTimer", v => { abilityTimers.shrinkray = v; refreshHudPowerups(); });
 
 			serverPaddleX = paddle.x;
 			// Track server position for smooth correction in the ticker

@@ -215,6 +215,9 @@ export class GameRoom extends Room<GameState> {
 			paddle.pSpeed = 14.16;
 			paddle.inversionEffect = false;
 			paddle.multiballs = 0;
+			paddle.slowmoTimer = 0;
+			paddle.inversionTimer = 0;
+			paddle.shrinkrayTimer = 0;
 		});
  
 		this.state.phase = "lobby";
@@ -287,8 +290,35 @@ export class GameRoom extends Room<GameState> {
 		}
 	}
 
+	private tickTimedAbilities(): void {
+		this.state.paddles.forEach((paddle) => {
+			// SLOWMO
+			if (paddle.slowmoTimer > 0) {
+				paddle.slowmoTimer = Math.max(0, paddle.slowmoTimer - 1);
+				if (paddle.slowmoTimer === 0) {
+					paddle.pSpeed = 14.16; // restore default speed
+				}
+			}
+			// INVERSION
+			if (paddle.inversionTimer > 0) {
+				paddle.inversionTimer = Math.max(0, paddle.inversionTimer - 1);
+				if (paddle.inversionTimer === 0) {
+					paddle.inversionEffect = false;
+				}
+			}
+			// SHRINKRAY
+			if (paddle.shrinkrayTimer > 0) {
+				paddle.shrinkrayTimer = Math.max(0, paddle.shrinkrayTimer - 1);
+				if (paddle.shrinkrayTimer === 0) {
+					paddle.scaleX = 1; // restore default scale
+				}
+			}
+		});
+	}
+
 	private tickPerSecond(): void {
 		if (this.state.phase !== "playing") return;
+		this.tickTimedAbilities();
 		if (this.state.seconds <= 0 && this.state.minutes > 0) {
 			this.state.minutes--;
 			this.state.seconds = 59;

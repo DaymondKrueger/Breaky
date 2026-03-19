@@ -139,17 +139,30 @@ export class BallManager {
 						break;
 					}
 					case BrickTypes.SLOWMO: {
-						ownerPaddle.pSpeed *= 0.6;
+						// Only apply speed penalty on first activation
+						if (ownerPaddle.slowmoTimer <= 0) {
+							ownerPaddle.pSpeed *= 0.6;
+						}
+						ownerPaddle.slowmoTimer += 5;
+						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;
 					}
 					case BrickTypes.INVERSION: {
-						ownerPaddle.inversionEffect = !ownerPaddle.inversionEffect;
+						// Only enable inversion on first activation
+						if (ownerPaddle.inversionTimer <= 0) {
+							ownerPaddle.inversionEffect = true;
+						}
+						ownerPaddle.inversionTimer += 5;
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;
 					}
 					case BrickTypes.SHRINKRAY: {
-						ownerPaddle.scaleX = 0.75;
+						// Only apply shrink on first activation
+						if (ownerPaddle.shrinkrayTimer <= 0) {
+							ownerPaddle.scaleX = 0.75;
+						}
+						ownerPaddle.shrinkrayTimer += 5;
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;
 					}
