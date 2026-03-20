@@ -143,7 +143,7 @@ export class BallManager {
 						if (ownerPaddle.slowmoTimer <= 0) {
 							ownerPaddle.pSpeed *= 0.6;
 						}
-						ownerPaddle.slowmoTimer += 5;
+						ownerPaddle.slowmoTimer += 10;
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;
@@ -153,7 +153,7 @@ export class BallManager {
 						if (ownerPaddle.inversionTimer <= 0) {
 							ownerPaddle.inversionEffect = true;
 						}
-						ownerPaddle.inversionTimer += 5;
+						ownerPaddle.inversionTimer += 10;
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;
 					}
@@ -162,7 +162,7 @@ export class BallManager {
 						if (ownerPaddle.shrinkrayTimer <= 0) {
 							ownerPaddle.scaleX = 0.75;
 						}
-						ownerPaddle.shrinkrayTimer += 5;
+						ownerPaddle.shrinkrayTimer += 10;
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;
 					}
