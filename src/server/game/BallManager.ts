@@ -15,8 +15,8 @@ export class BallManager {
 		const ballId = `ball_${this.nextBallId++}`;
 		const ball = new BallSchema();
 		ball.ownerSessionId = sessionId;
-		ball.x  = paddle.x + (C.PADDLE_WIDTH * paddle.scaleX) / 2 - C.BALL_WIDTH / 2;
-		ball.y  = paddle.team === 0 ? C.BLUE_PADDLE_Y - C.BALL_HEIGHT : C.RED_PADDLE_Y + C.PADDLE_HEIGHT;
+		ball.x = paddle.x + (C.PADDLE_WIDTH * paddle.scaleX) / 2 - C.BALL_WIDTH / 2;
+		ball.y = paddle.team === 0 ? C.BLUE_PADDLE_Y - C.BALL_HEIGHT : C.RED_PADDLE_Y + C.PADDLE_HEIGHT;
 		ball.vX = 0;
 		ball.vY = 0;
 		this.state.balls.set(ballId, ball);
@@ -144,7 +144,6 @@ export class BallManager {
 							ownerPaddle.pSpeed *= 0.6;
 						}
 						ownerPaddle.slowmoTimer += 10;
-						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;
 					}

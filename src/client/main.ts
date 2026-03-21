@@ -30,13 +30,7 @@ export function screenShake(app: Application, intensity = 15, duration = 500): v
 
 function resize(app: Application): void {
     const scaleY = window.innerHeight / gs.HEIGHT;
-    const scaleX = window.innerWidth / gs.WIDTH;
-    
-    // Use height scale as base but allow wider canvas
-    const scale = scaleY;
-    
-    // How many game units wide can we actually show?
-    const visibleWidth = window.innerWidth / scale;
+    const visibleWidth = window.innerWidth / scaleY;
     
     // Resize the actual PIXI renderer to the new logical size
     app.renderer.resize(visibleWidth, gs.HEIGHT);
