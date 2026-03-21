@@ -34,7 +34,7 @@ export class GameRoom extends Room<GameState> {
 
 	onCreate(_options: any) {
 		this.setState(new GameState());
-        this.setPatchRate(1000 / 60); // match simulation rate
+        this.setPatchRate(1000 / 20); // match simulation rate
 
 		this.brickManager = new BrickManager(this.state);
 		this.ballManager = new BallManager(this.state, this.brickManager);

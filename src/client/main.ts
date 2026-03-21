@@ -103,7 +103,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		height: gs.HEIGHT,
 		backgroundAlpha: 0,
 		antialias: false,
-		resolution: 1,
+		resolution: window.devicePixelRatio,
 	});
 	gs.app = app;
 	gameContainer.prepend(app.canvas as HTMLCanvasElement);
