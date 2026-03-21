@@ -9,12 +9,12 @@ export class BrickSchema extends Schema {
 	relY: number = 0;
 }
 defineTypes(BrickSchema, {
-	brickType: "number",
-	health: "number",
-	x: "number",
-	y: "number",
-	relX: "number",
-	relY: "number",
+	brickType: "uint8",
+	health: "uint8",
+	x: "float32",
+	y: "float32",
+	relX: "float32",
+	relY: "float32",
 });
 
 export class BallSchema extends Schema {
@@ -25,10 +25,10 @@ export class BallSchema extends Schema {
 	ownerSessionId: string = "";
 }
 defineTypes(BallSchema, {
-	x: "number",
-	y: "number",
-	vX: "number",
-	vY: "number",
+	x: "float32",
+	y: "float32",
+	vX: "float32",
+	vY: "float32",
 	ownerSessionId: "string",
 });
 
@@ -48,19 +48,19 @@ export class PaddleSchema extends Schema {
 	shrinkrayTimer: number = 0;
 }
 defineTypes(PaddleSchema, {
-	x: "number",
-	team: "number",
-	score: "number",
+	x: "float32",
+	team: "uint8",
+	score: "uint8",
 	username: "string",
 	playerId: "string",
-	scaleX: "number",
-	pSpeed: "number",
+	scaleX: "float32",
+	pSpeed: "float32",
 	inversionEffect: "boolean",
-	multiballs: "number",
+	multiballs: "uint8",
 	isReady: "boolean",
-	slowmoTimer: "number",
-	inversionTimer: "number",
-	shrinkrayTimer: "number",
+	slowmoTimer: "uint8",
+	inversionTimer: "uint8",
+	shrinkrayTimer: "uint8",
 });
 
 export class GameState extends Schema {
@@ -82,13 +82,13 @@ defineTypes(GameState, {
 	paddles: { map: PaddleSchema },
 	balls: { map: BallSchema },
 	bricks: [BrickSchema],
-	bricksPerLine: "number",
-	blueHealth: "number",
-	redHealth: "number",
-	minutes: "number",
-	seconds: "number",
+	bricksPerLine: "uint8",
+	blueHealth: "uint8",
+	redHealth: "uint8",
+	minutes: "uint8",
+	seconds: "uint8",
 	phase: "string",
-	countdownSeconds: "number",
-    rematchCount: "number",
+	countdownSeconds: "uint8",
+    rematchCount: "uint8",
 	gameOverReason: "string",
 });
