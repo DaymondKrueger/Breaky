@@ -15,6 +15,8 @@ interface InputMessage { left: boolean; right: boolean; releaseBall: boolean; }
 export class GameRoom extends Room<GameState> {
 	maxClients = 10;
 
+    private clockTicker: any = null;
+
 	private TICK_RATE = 60;
 	private inputs = new Map<string, InputMessage>();
 	// Timestamp (server ms) of the last input received per client. Used to time-out stale movement if a key-release message is delayed.
@@ -221,6 +223,9 @@ export class GameRoom extends Room<GameState> {
 			paddle.shrinkrayTimer = 0;
 		});
  
+		this.clockTicker?.clear();
+		this.clockTicker = null;
+        
 		this.state.phase = "lobby";
 		this.state.gameOverReason = "";
 		this.unlock();
@@ -238,7 +243,7 @@ export class GameRoom extends Room<GameState> {
 		});
 
 		this.state.phase = "playing";
-		this.clock.setInterval(() => this.tickPerSecond(), 1000);
+		this.clockTicker = this.clock.setInterval(() => this.tickPerSecond(), 1000);
 	}
 
 	// Simulation
