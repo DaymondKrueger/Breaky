@@ -485,7 +485,10 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const updateRematchStatus = () => {
 		if (room.state.phase !== "gameover") return;
 		let totalReal = 0;
-		room.state.paddles.forEach(() => { totalReal++; });
+		room.state.paddles.forEach((p, sid) => { 
+			if (sid.startsWith("bot_")) return;
+            totalReal++; 
+        });
 		const count = room.state.rematchCount;
 		rematchStatus.textContent = count > 0 ? `${count} / ${totalReal} players rematching...` : "";
 	};
