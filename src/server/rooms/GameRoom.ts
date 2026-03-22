@@ -295,8 +295,10 @@ export class GameRoom extends Room<GameState> {
 			}
 		});
 
+        let shakeNeeded = false;
 		// updateAll returns ball IDs that left the field this tick.
-		const destroyed = this.ballManager.updateAll(dt, () => this.broadcast("shake"));
+		const destroyed = this.ballManager.updateAll(dt, () => { shakeNeeded = true; });
+		if (shakeNeeded) this.broadcast("shake");
 
 		for (const ballId of destroyed) {
 			const ball = this.state.balls.get(ballId);
