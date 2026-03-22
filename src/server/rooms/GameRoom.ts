@@ -42,9 +42,14 @@ export class GameRoom extends Room<GameState> {
 		this.paddleManager = new PaddleManager();
 		this.botManager = new BotManager(this.state, this.inputs);
 
-		this.onMessage<InputMessage>("input", (client, data) => {
+        // Bit 0 (1) = left, Bit 1 (2) = right, Bit 2 (4) = releaseBall
+		this.onMessage<number>("input", (client, data) => {
 			if (this.state.phase !== "playing") return;
-			this.inputs.set(client.sessionId, data);
+			this.inputs.set(client.sessionId, {
+				left: (data & 1) !== 0,
+				right: (data & 2) !== 0,
+				releaseBall: (data & 4) !== 0,
+			});
 			this.lastInputTime.set(client.sessionId, this.clock.currentTime);
 		});
 

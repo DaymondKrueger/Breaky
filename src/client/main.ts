@@ -267,7 +267,16 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         releaseBall: false,
     };
 
-    const sendInput = () => room.send("input", input);
+	// Bit 0 (1) = left, Bit 1 (2) = right, Bit 2 (4) = releaseBall
+	function packInput(): number {
+		let flags = 0;
+		if (input.left) flags |= 1;
+		if (input.right) flags |= 2;
+		if (input.releaseBall) flags |= 4;
+		return flags;
+	}
+
+    const sendInput = () => room.send("input", packInput());
 
     window.addEventListener("keydown", (e: KeyboardEvent) => setKey(e, true));
     window.addEventListener("keyup", (e: KeyboardEvent) => setKey(e, false));
