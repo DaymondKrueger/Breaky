@@ -73,7 +73,8 @@ attemptReconnect().then((reconnected) => {
             menuContent.style.display = "flex";
             clearTimeout(hideMenuContent);
             // TODO: Show an error message HTML element instead of an alert
-            alert(e);
+            const message = e instanceof Error ? e.message : String(e);
+			alert(message);
         }
     });
 });

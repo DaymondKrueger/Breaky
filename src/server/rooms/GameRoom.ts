@@ -84,10 +84,10 @@ export class GameRoom extends Room<GameState> {
 
 	onJoin(client: Client, options: JoinOptions) {
 		if (this.state.phase !== "lobby") {
-			throw new Error("Game already in progress. Join a new room.");
+			throw new Error("Game already in progress. Please join a new room.");
 		}
 
-        if (options.playerId == undefined) throw new Error("Undefined playerId");
+        if (options.playerId == undefined) throw new Error("Missing player ID. Please refresh and try again.");
 
         // Reject if this playerId is already in the room
 		if (options.playerId) {
