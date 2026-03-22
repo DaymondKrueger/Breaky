@@ -20,10 +20,6 @@ export class GameRoom extends Room<GameState> {
 
 	private TICK_RATE = 60;
 	private inputs = new Map<string, InputMessage>();
-	// Timestamp (server ms) of the last input received per client. Used to time-out stale movement if a key-release message is delayed.
-	private lastInputTime = new Map<string, number>();
-	// How many ticks of silence before we zero out a client's movement inputs. 3 ticks @ 60 Hz = 50 ms
-	private readonly INPUT_TIMEOUT_TICKS = 3;
 
 	private brickManager!: BrickManager;
 	private ballManager!: BallManager;
@@ -42,16 +38,26 @@ export class GameRoom extends Room<GameState> {
 		this.paddleManager = new PaddleManager();
 		this.botManager = new BotManager(this.state, this.inputs);
 
-        // Bit 0 (1) = left, Bit 1 (2) = right, Bit 2 (4) = releaseBall
-		this.onMessage<number>("input", (client, data) => {
-			if (this.state.phase !== "playing") return;
-			this.inputs.set(client.sessionId, {
-				left: (data & 1) !== 0,
-				right: (data & 2) !== 0,
-				releaseBall: (data & 4) !== 0,
-			});
-			this.lastInputTime.set(client.sessionId, this.clock.currentTime);
-		});
+        // Client sends { x: paddlePosition, f: flags } where flags bit 0 = releaseBall
+        this.onMessage<{ x: number; f: number }>("input", (client, data) => {
+            if (this.state.phase !== "playing") return;
+
+            const paddle = this.state.paddles.get(client.sessionId);
+            if (!paddle) return;
+
+            // Validate and accept client position
+            const paddleW = C.PADDLE_WIDTH * paddle.scaleX;
+            const minX = 34;
+            const maxX = C.MAP_WIDTH - paddleW - 34;
+            paddle.x = Math.max(minX, Math.min(maxX, data.x));
+
+            // Store releaseBall flag for processing in update()
+            this.inputs.set(client.sessionId, {
+                left: false,
+                right: false,
+                releaseBall: (data.f & 1) !== 0,
+            });
+        });
 
 		this.onMessage("ready", (client) => {
 			if (this.state.phase !== "lobby") return;
@@ -116,7 +122,6 @@ export class GameRoom extends Room<GameState> {
 
 		this.state.paddles.set(client.sessionId, paddle);
 		this.inputs.set(client.sessionId, { left: false, right: false, releaseBall: false });
-		this.lastInputTime.set(client.sessionId, this.clock.currentTime);
 
 		console.log(`[GameRoom] ${paddle.username} joined (team ${team}). Player ID of ${options.playerId}`);
 	}
@@ -142,7 +147,6 @@ export class GameRoom extends Room<GameState> {
 		this.ballManager.removeAllForSession(client.sessionId);
 		this.state.paddles.delete(client.sessionId);
 		this.inputs.delete(client.sessionId);
-		this.lastInputTime.delete(client.sessionId);
 
 		if (this.state.phase === "lobby") {
 			// Cancel any countdown that was running - someone left.
@@ -273,19 +277,12 @@ export class GameRoom extends Room<GameState> {
 
 		this.botManager.updateBotInputs();
 
-		const now = this.clock.currentTime;
-		const tickMs = 1000 / this.TICK_RATE;
 		this.state.paddles.forEach((paddle, sessionId) => {
-			let input = this.inputs.get(sessionId) ?? { left: false, right: false, releaseBall: false };
-			// If we haven't heard from this client in INPUT_TIMEOUT_TICKS, treat movement as released. Prevents phantom movement when a key-release message is delayed or dropped.
-			if (!this.botManager.isBot(sessionId)) {
-                const lastTime = this.lastInputTime.get(sessionId) ?? now;
-                if (now - lastTime > this.INPUT_TIMEOUT_TICKS * tickMs) {
-                    input = { ...input, left: false, right: false };
-                }
+            if (this.botManager.isBot(sessionId)) {
+                const input = this.inputs.get(sessionId) ?? { left: false, right: false, releaseBall: false };
+                this.paddleManager.updatePaddle(paddle, input, dt);
             }
-			this.paddleManager.updatePaddle(paddle, input, dt);
-		});
+        });
 
         // Release any balls for players pressing space
 		this.state.paddles.forEach((_paddle, sessionId) => {

@@ -1,4 +1,4 @@
-import { Application, Container, Sprite, Text, TextStyle, Texture, Point } from "pixi.js";
+import { Application, Container, Sprite, Texture } from "pixi.js";
 import type * as Colyseus from "colyseus.js";
 import { gs } from "./state";
 import { loadAssets } from "./assets";
@@ -231,23 +231,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 	// Local prediction state
 	let localPaddleX = 0;
-	let serverPaddleX = 0; // latest x received from server
 	let localPSpeed = C.PADDLE_WIDTH; // updated when server sends pSpeed
 	let localScaleX = 1; // updated when server sends scaleX
 	let localInversion = false;
-
-	// THROTTLE_START should sit comfortably above normal low-ping drift (5ish units).
-	// THROTTLE_FULL should be above the max high-ping drift you want to tolerate.
-	const THROTTLE_START = 40; // units, full speed below this gap
-	const THROTTLE_FULL = 160; // units, zero speed at or beyond this gap
-
-	// Idle lerp: when no keys are held, drift back toward the server position.
-	// IDLE_LERP_DEADZONE — gaps smaller than this are ignored entirely. Prevents micro-jitter from float drift at low ping.
-	// IDLE_LERP_DELAY_MS — how long to wait after releasing a key before the lerp starts. Gives the server time to finish processing the last in-flight input so serverPaddleX has settled before we chase it.
-	const IDLE_LERP_DEADZONE = 8; // units, ignore gaps smaller than this
-	const IDLE_LERP_DELAY_MS = 80; // ms, wait this long after last keyup before correcting
-	const IDLE_LERP_STRENGTH = 0.1; // lerp factor per tick (lower = smoother)
-	let idleMs = 0; // ms spent with no movement input held
 
     type InputAction = "left" | "right" | "releaseBall";
 
@@ -265,16 +251,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         releaseBall: false,
     };
 
-	// Bit 0 (1) = left, Bit 1 (2) = right, Bit 2 (4) = releaseBall
-	function packInput(): number {
-		let flags = 0;
-		if (input.left) flags |= 1;
-		if (input.right) flags |= 2;
-		if (input.releaseBall) flags |= 4;
-		return flags;
-	}
-
-    const sendInput = () => room.send("input", packInput());
+	function sendInput(): void {
+        let flags = 0;
+        if (input.releaseBall) flags |= 1;
+        room.send("input", { x: localPaddleX, f: flags });
+    }
 
     window.addEventListener("keydown", (e: KeyboardEvent) => setKey(e, true));
     window.addEventListener("keyup", (e: KeyboardEvent) => setKey(e, false));
@@ -286,9 +267,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         input[action] = pressed;
         sendInput();
     }
-
-    let lastInputHeartbeat = 0;
-    const INPUT_HEARTBEAT_MS = 33; // roughly 2 ticks @ 60 Hz
 
     window.addEventListener("touchstart", (e) => {
         const hasUnreleased = [...localBalls.values()].some(
@@ -363,10 +341,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			paddle.listen("slowmoTimer", v => { abilityTimers.slowmo = v; refreshHudPowerups(); });
 			paddle.listen("inversionTimer", v => { abilityTimers.inversion = v; refreshHudPowerups(); });
 			paddle.listen("shrinkrayTimer", v => { abilityTimers.shrinkray = v; refreshHudPowerups(); });
-
-			serverPaddleX = paddle.x;
-			// Track server position for smooth correction in the ticker
-			paddle.listen("x", v => { serverPaddleX = v; });
 		} else {
 			paddleTargetX.set(sessionId, paddle.x);
 			paddle.listen("x", v => paddleTargetX.set(sessionId, v));
@@ -522,43 +496,22 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		const myPaddle = paddleObjects.get(room.sessionId);
         if (myPaddle) myPaddle.paddle.scale.x = localScaleX;
 
-		// Local paddle. Client authority with server-gap throttling
-		if (myPaddle && room.state.phase === "playing") {
-			const paddleW = C.PADDLE_WIDTH * localScaleX;
-			const maxX = C.MAP_WIDTH - paddleW - 34;
+		// Local paddle
+        if (myPaddle && room.state.phase === "playing") {
+            const paddleW = C.PADDLE_WIDTH * localScaleX;
+            const maxX = C.MAP_WIDTH - paddleW - 34;
 
-			// Resolve effective direction accounting for inversion powerup
-			const wantsRight = localInversion ? input.left  : input.right;
-			const wantsLeft  = localInversion ? input.right : input.left;
+            // Resolve effective direction accounting for inversion powerup
+            const wantsRight = localInversion ? input.left  : input.right;
+            const wantsLeft  = localInversion ? input.right : input.left;
 
-			// Signed gap: positive means client is to the right of server. Throttling only applies when moving further from the server, never when moving back toward it.
-			const gap = localPaddleX - serverPaddleX;
+            if (wantsRight) localPaddleX += localPSpeed * dt;
+            if (wantsLeft)  localPaddleX -= localPSpeed * dt;
 
-			if (wantsRight || wantsLeft) idleMs = 0;
-
-			if (wantsRight) {
-				// Moving right. Throttle only if client is already ahead to the right.
-				const aheadGap = Math.max(0, gap); // positive when client is right of server
-				const throttle = aheadGap <= THROTTLE_START ? 1 : aheadGap >= THROTTLE_FULL ? 0 : 1 - (aheadGap - THROTTLE_START) / (THROTTLE_FULL - THROTTLE_START);
-				localPaddleX += localPSpeed * dt * throttle;
-			} else if (wantsLeft) {
-				// Moving left. Throttle only if client is already ahead to the left.
-				const aheadGap = Math.max(0, -gap); // positive when client is left of server
-				const throttle = aheadGap <= THROTTLE_START ? 1 : aheadGap >= THROTTLE_FULL ? 0 : 1 - (aheadGap - THROTTLE_START) / (THROTTLE_FULL - THROTTLE_START);
-				localPaddleX -= localPSpeed * dt * throttle;
-			} else {
-				// Idle.. accumulate time since last movement, then lerp toward server.
-				// The delay lets the server finish processing the last in-flight input before we start correcting, so we're not chasing a moving target.
-				idleMs += ticker.elapsedMS;
-				if (idleMs >= IDLE_LERP_DELAY_MS && Math.abs(gap) > IDLE_LERP_DEADZONE) {
-					localPaddleX += gap * -IDLE_LERP_STRENGTH * dt;
-				}
-			}
-
-			localPaddleX = Math.max(34, Math.min(maxX, localPaddleX));
-			myPaddle.paddle.x = localPaddleX;
-			myPaddle.syncLabelX(localPaddleX);
-		}
+            localPaddleX = Math.max(34, Math.min(maxX, localPaddleX));
+            myPaddle.paddle.x = localPaddleX;
+            myPaddle.syncLabelX(localPaddleX);
+        }
 
 		// Remote paddle interpolation
 		paddleObjects.forEach((cp, sessionId) => {
@@ -636,12 +589,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		cullOffScreen(gs.camera, app.renderer.width);
 
 		const now = Date.now();
-
-		// Heartbeat: re-send held movement inputs so the server timeout never fires during normal play, and dropped stop-messages self-correct fast.
-		if ((input.left || input.right) && now - lastInputHeartbeat >= INPUT_HEARTBEAT_MS) {
-			lastInputHeartbeat = now;
-			sendInput();
-		}
 
 		if (now - lastSecond > 1000) {
 			lastSecond = now;
