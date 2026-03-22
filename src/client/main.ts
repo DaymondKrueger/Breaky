@@ -29,27 +29,27 @@ export function screenShake(app: Application, intensity = 15, duration = 500): v
 }
 
 function resize(app: Application): void {
-    const scaleY = window.innerHeight / gs.HEIGHT;
-    const visibleWidth = window.innerWidth / scaleY;
-    
-    // Resize the actual PIXI renderer to the new logical size
-    app.renderer.resize(visibleWidth, gs.HEIGHT);
-    
-    // Scale the canvas element to fill the screen
-    const canvas = app.canvas as HTMLCanvasElement;
-    canvas.style.width = `${window.innerWidth}px`;
-    canvas.style.height = `${window.innerHeight}px`;
-    canvas.style.position = "absolute";
-    canvas.style.left = "0";
-    canvas.style.top = "0";
-    canvas.style.transform = "none";
+	const scaleY = window.innerHeight / gs.HEIGHT;
+	const visibleWidth = window.innerWidth / scaleY;
+
+	// Resize the actual PIXI renderer to the new logical size
+	app.renderer.resize(visibleWidth, gs.HEIGHT);
+
+	// Scale the canvas element to fill the screen
+	const canvas = app.canvas as HTMLCanvasElement;
+	canvas.style.width = `${window.innerWidth}px`;
+	canvas.style.height = `${window.innerHeight}px`;
+	canvas.style.position = "absolute";
+	canvas.style.left = "0";
+	canvas.style.top = "0";
+	canvas.style.transform = "none";
 }
 
 function cullOffScreen(camera: Container, viewW: number): void {
 	const pivotX = camera.pivot.x;
 	const leftEdge = pivotX - 512;
 	const rightEdge = pivotX + viewW;
- 
+
 	for (const child of camera.children) {
 		if (child.label === "noCull") continue;
 		const cx = (child as any).x ?? 0;
@@ -119,7 +119,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	gs.HUD.interactiveChildren = false;
 
 	await loadAssets();
-    
+
 	const localPaddleSchema = room.state.paddles.get(room.sessionId);
 	if (localPaddleSchema?.team === 1) {
 		gs.isFlipped = true;
@@ -140,9 +140,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		lArrow.x = 30; lArrow.y = gs.HEIGHT / 2 - lArrow.height / 2;
 		gs.HUD.addChild(lArrow);
 		const rArrow = new Sprite(Texture.from("mobileArrow"));
-        rArrow.anchor.set(1, 0);
-        rArrow.x = app.renderer.width - 30;
-        rArrow.y = app.renderer.height / 2 - rArrow.height / 2;
+		rArrow.anchor.set(1, 0);
+		rArrow.x = app.renderer.width - 30;
+		rArrow.y = app.renderer.height / 2 - rArrow.height / 2;
 		gs.HUD.addChild(rArrow);
 	}
 
@@ -157,45 +157,45 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const gameOverReason = document.getElementById("game-over-reason")!;
 	const rematchBtn = document.getElementById("rematch-btn")!;
 	const rematchStatus = document.getElementById("rematch-status")!;
-    const hudPing = document.getElementById("hud-ping")!;
-    const hudPowerups = document.getElementById("hud-powerups")!;
+	const hudPing = document.getElementById("hud-ping")!;
+	const hudPowerups = document.getElementById("hud-powerups")!;
 
-    type TimedAbility = "slowmo" | "inversion" | "shrinkray";
-    const ABILITY_IMAGES: Record<TimedAbility, string> = {
-        slowmo: "res/bricks/ability_slowmo.png",
-        inversion: "res/bricks/ability_inversion.png",
-        shrinkray: "res/bricks/ability_shrink.png",
-    };
+	type TimedAbility = "slowmo" | "inversion" | "shrinkray";
+	const ABILITY_IMAGES: Record<TimedAbility, string> = {
+		slowmo: "res/bricks/ability_slowmo.png",
+		inversion: "res/bricks/ability_inversion.png",
+		shrinkray: "res/bricks/ability_shrink.png",
+	};
 
-    function formatTimer(seconds: number): string {
-        const s = Math.max(0, Math.ceil(seconds));
-        return `0:${s.toString().padStart(2, "0")}`;
-    }
+	function formatTimer(seconds: number): string {
+		const s = Math.max(0, Math.ceil(seconds));
+		return `0:${s.toString().padStart(2, "0")}`;
+	}
 
-    // Tracks live timer values so we can refresh the HUD
-    const abilityTimers: Record<TimedAbility, number> = { slowmo: 0, inversion: 0, shrinkray: 0 };
+	// Tracks live timer values so we can refresh the HUD
+	const abilityTimers: Record<TimedAbility, number> = { slowmo: 0, inversion: 0, shrinkray: 0 };
 
-    function refreshHudPowerups(): void {
-        hudPowerups.innerHTML = "";
-        let anyActive = false;
-        (Object.keys(abilityTimers) as TimedAbility[]).forEach((key) => {
-            const t = abilityTimers[key];
-            if (t <= 0) return;
-            anyActive = true;
-            const container = document.createElement("div");
-            container.className = "powerup-container";
-            const img = document.createElement("div");
-            img.className = "powerup-image";
-            img.style.backgroundImage = `url("${ABILITY_IMAGES[key]}")`;
-            const timer = document.createElement("div");
-            timer.className = "powerup-timer";
-            timer.textContent = formatTimer(t);
-            container.appendChild(img);
-            container.appendChild(timer);
-            hudPowerups.appendChild(container);
-        });
-        hudPowerups.style.opacity = anyActive ? "1" : "0";
-    }
+	function refreshHudPowerups(): void {
+		hudPowerups.innerHTML = "";
+		let anyActive = false;
+		(Object.keys(abilityTimers) as TimedAbility[]).forEach((key) => {
+			const t = abilityTimers[key];
+			if (t <= 0) return;
+			anyActive = true;
+			const container = document.createElement("div");
+			container.className = "powerup-container";
+			const img = document.createElement("div");
+			img.className = "powerup-image";
+			img.style.backgroundImage = `url("${ABILITY_IMAGES[key]}")`;
+			const timer = document.createElement("div");
+			timer.className = "powerup-timer";
+			timer.textContent = formatTimer(t);
+			container.appendChild(img);
+			container.appendChild(timer);
+			hudPowerups.appendChild(container);
+		});
+		hudPowerups.style.opacity = anyActive ? "1" : "0";
+	}
 
 	let isReady = false;
 	let hasVotedRematch = false;
@@ -221,8 +221,10 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	// Interpolation targets
 	// Remote paddles and all balls are interpolated toward server positions
 	const paddleTargetX = new Map<string, number>();
-    let lastPositionSync = 0;
-    const POSITION_SYNC_MS = 16;
+
+	// Position sync heartbeat
+	let lastPositionSync = 0;
+	const POSITION_SYNC_MS = 50;
 
 	// Ball prediction state
 	interface LocalBall { x: number; y: number; vX: number; vY: number; ownerSessionId: string; }
@@ -237,70 +239,70 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	let localScaleX = 1; // updated when server sends scaleX
 	let localInversion = false;
 
-    type InputAction = "left" | "right" | "releaseBall";
+	type InputAction = "left" | "right" | "releaseBall";
 
-    const keyMap: Record<string, InputAction> = {
-        ArrowRight: "right",
-        KeyD: "right",
-        ArrowLeft: "left",
-        KeyA: "left",
-        Space: "releaseBall",
-    };
+	const keyMap: Record<string, InputAction> = {
+		ArrowRight: "right",
+		KeyD: "right",
+		ArrowLeft: "left",
+		KeyA: "left",
+		Space: "releaseBall",
+	};
 
-    const input: Record<InputAction, boolean> = {
-        left: false,
-        right: false,
-        releaseBall: false,
-    };
+	const input: Record<InputAction, boolean> = {
+		left: false,
+		right: false,
+		releaseBall: false,
+	};
 
 	function sendInput(): void {
-        const wantsRight = localInversion ? input.left  : input.right;
-        const wantsLeft = localInversion ? input.right : input.left;
-        let d = 0;
-        if (wantsRight) d = 1;
-        if (wantsLeft) d = -1;
+		const wantsRight = localInversion ? input.left  : input.right;
+		const wantsLeft = localInversion ? input.right : input.left;
+		let d = 0;
+		if (wantsRight) d = 1;
+		if (wantsLeft) d = -1;
 
-        let f = 0;
-        if (input.releaseBall) f |= 1;
-        room.send("input", { x: localPaddleX, d, f });
-    }
+		let f = 0;
+		if (input.releaseBall) f |= 1;
+		room.send("input", { x: localPaddleX, d, f });
+	}
 
-    window.addEventListener("keydown", (e: KeyboardEvent) => setKey(e, true));
-    window.addEventListener("keyup", (e: KeyboardEvent) => setKey(e, false));
+	window.addEventListener("keydown", (e: KeyboardEvent) => setKey(e, true));
+	window.addEventListener("keyup", (e: KeyboardEvent) => setKey(e, false));
 
-    function setKey(e: KeyboardEvent, pressed: boolean) {
-        const action = keyMap[e.code];
-        if (!action) return;
+	function setKey(e: KeyboardEvent, pressed: boolean) {
+		const action = keyMap[e.code];
+		if (!action) return;
 
-        input[action] = pressed;
-        sendInput();
-    }
+		input[action] = pressed;
+		sendInput();
+	}
 
-    window.addEventListener("touchstart", (e) => {
-        const hasUnreleased = [...localBalls.values()].some(
-            b => b.ownerSessionId === room.sessionId && b.vX === 0 && b.vY === 0
-        );
+	window.addEventListener("touchstart", (e) => {
+		const hasUnreleased = [...localBalls.values()].some(
+			b => b.ownerSessionId === room.sessionId && b.vX === 0 && b.vY === 0
+		);
 
-        if (hasUnreleased) {
-            input.releaseBall = true;
-            sendInput();
-            return;
-        }
+		if (hasUnreleased) {
+			input.releaseBall = true;
+			sendInput();
+			return;
+		}
 
-        input.left  = e.touches[0].pageX / window.innerWidth < 0.5;
-        input.right = !input.left;
-        sendInput();
-    }, true);
+		input.left = e.touches[0].pageX / window.innerWidth < 0.5;
+		input.right = !input.left;
+		sendInput();
+	}, true);
 
-    window.addEventListener("touchend", () => {
-        input.left = input.right = input.releaseBall = false;
-        sendInput();
-    }, true);
+	window.addEventListener("touchend", () => {
+		input.left = input.right = input.releaseBall = false;
+		sendInput();
+	}, true);
 
-    // Prevent long-press highlight on the canvas
-    const canvas = app.canvas as HTMLCanvasElement;
-    canvas.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
-    canvas.addEventListener("touchmove",  (e) => e.preventDefault(), { passive: false });
+	// Prevent long-press highlight on the canvas
+	const canvas = app.canvas as HTMLCanvasElement;
+	canvas.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+	canvas.addEventListener("touchmove",  (e) => e.preventDefault(), { passive: false });
 
 	// Schema listeners: bricks
 	room.state.bricks.onAdd((brick, index) => {
@@ -309,7 +311,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		brick.listen("brickType", () => cb.update(brick));
 		brick.listen("health", () => cb.update(brick));
 	});
- 
+
 	room.state.bricks.onRemove((_brick, index) => {
 		brickObjects.get(index)?.destroy();
 		brickObjects.delete(index);
@@ -321,8 +323,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		room.state.paddles.forEach((p, sid) => {
 			if (sid.startsWith("bot_")) return;
 			const li = document.createElement("li");
-			const teamLabel = p.team === 0 ? "🔵" : "🔴";
-			li.textContent = `${teamLabel} ${p.username} ${p.isReady ? "✓" : "..."}`;
+			const teamLabel = p.team === 0 ? "\uD83D\uDD35" : "\uD83D\uDD34";
+			li.textContent = `${teamLabel} ${p.username} ${p.isReady ? "\u2713" : "..."}`;
 			if (sid === room.sessionId) li.style.fontWeight = "bold";
 			lobbyPlayerList.appendChild(li);
 		});
@@ -345,14 +347,14 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			paddle.listen("scaleX", v => { localScaleX = v; });
 			paddle.listen("inversionEffect", v => { localInversion = v; });
 
-            // Sync timed ability timers to HUD
+			// Sync timed ability timers to HUD
 			paddle.listen("slowmoTimer", v => { abilityTimers.slowmo = v; refreshHudPowerups(); });
 			paddle.listen("inversionTimer", v => { abilityTimers.inversion = v; refreshHudPowerups(); });
 			paddle.listen("shrinkrayTimer", v => { abilityTimers.shrinkray = v; refreshHudPowerups(); });
 		} else {
 			paddleTargetX.set(sessionId, paddle.x);
 			paddle.listen("x", v => paddleTargetX.set(sessionId, v));
-            paddle.listen("scaleX", v => { cp.paddle.scale.x = v; });
+			paddle.listen("scaleX", v => { cp.paddle.scale.x = v; });
 		}
 
 		paddle.listen("score", () => gs.leaderboard?.updateFromState(room.state));
@@ -425,11 +427,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 				rematchBtn.textContent = "Rematch";
 				rematchBtn.classList.remove("ready");
 				rematchStatus.textContent = "";
-                mainMenu.style.display = "flex";
-                mainMenu.style.opacity = "1";
+				mainMenu.style.display = "flex";
+				mainMenu.style.opacity = "1";
 			}
 			lobbyContent.style.display = "flex";
-            lobbyContent.style.opacity = "1";
+			lobbyContent.style.opacity = "1";
 			countdownEl.style.display = phase === "countdown" ? "block" : "none";
 			readyBtn.style.display = phase === "lobby" ? "block" : "none";
 			// Reset local ready state if returning to lobby from gameover
@@ -457,7 +459,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			updateRematchStatus();
 		}
 	});
- 
+
 	rematchBtn.addEventListener("click", () => {
 		hasVotedRematch = !hasVotedRematch;
 		if (hasVotedRematch) {
@@ -470,18 +472,18 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			rematchBtn.classList.remove("ready");
 		}
 	});
- 
+
 	const updateRematchStatus = () => {
 		if (room.state.phase !== "gameover") return;
 		let totalReal = 0;
-		room.state.paddles.forEach((p, sid) => { 
+		room.state.paddles.forEach((p, sid) => {
 			if (sid.startsWith("bot_")) return;
-            totalReal++; 
-        });
+			totalReal++;
+		});
 		const count = room.state.rematchCount;
 		rematchStatus.textContent = count > 0 ? `${count} / ${totalReal} players rematching...` : "";
 	};
- 
+
 	room.state.listen("rematchCount", () => updateRematchStatus());
 
 	room.state.listen("countdownSeconds", (v) => {
@@ -499,40 +501,35 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 	app.ticker.add((ticker) => {
 		const dt = ticker.deltaTime;
+		const now = Date.now();
 
-        // Set paddle scale
+		// Set paddle scale
 		const myPaddle = paddleObjects.get(room.sessionId);
-        if (myPaddle) myPaddle.paddle.scale.x = localScaleX;
+		if (myPaddle) myPaddle.paddle.scale.x = localScaleX;
 
 		// Local paddle
-        if (myPaddle && room.state.phase === "playing") {
-            const paddleW = C.PADDLE_WIDTH * localScaleX;
-            const maxX = C.MAP_WIDTH - paddleW - 34;
+		if (myPaddle && room.state.phase === "playing") {
+			const paddleW = C.PADDLE_WIDTH * localScaleX;
+			const maxX = C.MAP_WIDTH - paddleW - 34;
 
-            // Resolve effective direction accounting for inversion powerup
-            const wantsRight = localInversion ? input.left  : input.right;
-            const wantsLeft  = localInversion ? input.right : input.left;
+			const wantsRight = localInversion ? input.left : input.right;
+			const wantsLeft  = localInversion ? input.right : input.left;
 
-            if (wantsRight) localPaddleX += localPSpeed * dt;
-            if (wantsLeft)  localPaddleX -= localPSpeed * dt;
+			if (wantsRight) localPaddleX += localPSpeed * dt;
+			if (wantsLeft) localPaddleX -= localPSpeed * dt;
 
-            localPaddleX = Math.max(34, Math.min(maxX, localPaddleX));
-            myPaddle.paddle.x = localPaddleX;
-            myPaddle.syncLabelX(localPaddleX);
-        }
+			localPaddleX = Math.max(34, Math.min(maxX, localPaddleX));
+			myPaddle.paddle.x = localPaddleX;
+			myPaddle.syncLabelX(localPaddleX);
+		}
 
-        // Position sync heartbeat while moving
-        const now = Date.now();
-        const POSITION_SYNC_MS = 50;
-        let lastPositionSync = 0;
-
-        // In the ticker, after local paddle movement:
-        if (myPaddle && room.state.phase === "playing" && (input.left || input.right)) {
-            if (now - lastPositionSync >= POSITION_SYNC_MS) {
-                lastPositionSync = now;
-                sendInput();
-            }
-        }
+		// Position sync heartbeat while moving
+		if (myPaddle && room.state.phase === "playing" && (input.left || input.right)) {
+			if (now - lastPositionSync >= POSITION_SYNC_MS) {
+				lastPositionSync = now;
+				sendInput();
+			}
+		}
 
 		// Remote paddle interpolation
 		paddleObjects.forEach((cp, sessionId) => {
@@ -549,11 +546,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			const local = localBalls.get(ballId);
 			const server = serverBalls.get(ballId);
 			if (!local) return;
- 
+
 			// Unreleased ball
 			if (local.vX === 0 && local.vY === 0) {
 				const isLocalBall = local.ownerSessionId === room.sessionId;
-                // Local ball, snap right to middle of client paddle
+				// Local ball, snap right to middle of client paddle
 				if (isLocalBall) {
 					cb.sprite.x = localPaddleX + (C.PADDLE_WIDTH * localScaleX) / 2 - C.BALL_WIDTH / 2;
 				} else if (server) {
@@ -561,32 +558,38 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 					cb.sprite.x += (server.x - cb.sprite.x) * 0.15;
 					cb.sprite.y += (server.y - cb.sprite.y) * 0.15;
 				}
-				// Update trail even while held (stationary emission keeps the glow at rest)
-				// cb.trail.update(cb.sprite.x, cb.sprite.y, C.BALL_WIDTH, C.BALL_WIDTH, dt);
 				return;
 			}
 
+			const isLocalBall = local.ownerSessionId === room.sessionId;
 			const ownerTeam = ballOwnerTeam.get(ballId) ?? 0;
-			const paddle = room.state.paddles.get(local.ownerSessionId) ?? null;
+
+			let paddle: { x: number; team: number; scaleX: number } | null = null;
+			if (isLocalBall) {
+				const schema = room.state.paddles.get(room.sessionId);
+				if (schema) {
+					paddle = { x: localPaddleX, team: schema.team, scaleX: localScaleX };
+				}
+			} else {
+				paddle = room.state.paddles.get(local.ownerSessionId) ?? null;
+			}
 
 			stepBall(local, room.state.bricks, paddle, ownerTeam, dt, { onBrickHit: () => {} });
 
 			// Position correction toward server.
-			// Small drift (normal): gentle lerp so corrections are invisible.
-			// Large drift (extreme desync): hard snap so the ball isn't lost.
 			if (server) {
 				const dx = server.x - local.x;
 				const dy = server.y - local.y;
 				if (Math.abs(dx) > BALL_CORRECTION || Math.abs(dy) > BALL_CORRECTION) {
-					// Extreme case. Snap and re-seed velocity
+					// Extreme desync. Snap and re-seed velocity
 					local.x = server.x;
-                    local.y = server.y;
+					local.y = server.y;
 					local.vX = server.vX;
-                    local.vY = server.vY;
+					local.vY = server.vY;
 				} else {
-					// Normal case. Smooth correction
-					local.x += dx * 0.08;
-					local.y += dy * 0.08;
+					const correctionStrength = isLocalBall ? 0.03 : 0.08;
+					local.x += dx * correctionStrength;
+					local.y += dy * correctionStrength;
 				}
 			}
 
