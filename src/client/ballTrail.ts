@@ -16,6 +16,7 @@ interface TrailParticle {
 	sprite: Sprite;
 	life: number; // remaining lifetime (seconds)
 	maxLife: number; // total lifetime (seconds)
+    active: boolean; // is particle currently in use
 }
 
 function lerpColor(from: number, to: number, t: number): number {
@@ -28,7 +29,7 @@ function lerpColor(from: number, to: number, t: number): number {
 
 export class BallTrail {
 	private container: Container;
-	private particles: TrailParticle[] = [];
+	private pool: TrailParticle[] = [];
 	private emitAccum = 0;
 	private startColor: number;
 	private endColor: number;
@@ -41,6 +42,15 @@ export class BallTrail {
 		this.container = new Container();
         this.container.label = "noCull";
 
+        // Pre-allocate the entire pool
+		for (let i = 0; i < MAX_PARTICLES; i++) {
+			const sprite = new Sprite(getTrailTexture());
+			sprite.anchor.set(0.5);
+			sprite.renderable = false; // hidden until activated
+			this.container.addChild(sprite);
+			this.pool.push({ sprite, life: 0, maxLife: PARTICLE_LIFETIME, active: false });
+		}
+
 		// Added before the ball sprite so the trail renders behind the ball
 		gs.camera.addChild(this.container);
 	}
@@ -48,49 +58,58 @@ export class BallTrail {
 	update(x: number, y: number, ballW: number, ballH: number, dt: number): void {
 		const dtSec = dt / 60;
 
-		// Emit new particles
+		// Emit new particles by activating pooled ones
 		this.emitAccum += dtSec;
-		while (this.emitAccum >= EMIT_INTERVAL && this.particles.length < MAX_PARTICLES) {
+		while (this.emitAccum >= EMIT_INTERVAL) {
 			this.emitAccum -= EMIT_INTERVAL;
-			this.spawnParticle(x + ballW / 2, y + ballH / 2);
+			this.activateParticle(x + ballW / 2, y + ballH / 2);
 		}
-		if (this.emitAccum >= EMIT_INTERVAL) this.emitAccum = 0;
 
 		// Tick and age existing particles
-		for (let i = this.particles.length - 1; i >= 0; i--) {
-			const p = this.particles[i];
+		for (let i = 0; i < this.pool.length; i++) {
+			const p = this.pool[i];
+			if (!p.active) continue;
+ 
 			p.life -= dtSec;
-
+ 
 			if (p.life <= 0) {
-				this.container.removeChild(p.sprite);
-				p.sprite.destroy({ texture: false });
-				this.particles.splice(i, 1);
+				// Return to pool instead of destroying
+				p.active = false;
+				p.sprite.renderable = false;
 				continue;
 			}
-
+ 
 			const t = 1 - p.life / p.maxLife; // 0 = fresh, 1 = dying
-
 			p.sprite.alpha = 0.8 * (1 - t);
 			p.sprite.scale.set(1.0 - t * 0.85);
 			p.sprite.tint = lerpColor(this.startColor, this.endColor, t);
 		}
 	}
 
-	private spawnParticle(cx: number, cy: number): void {
-		const sprite = new Sprite(getTrailTexture());
-		sprite.anchor.set(0.5);
-		sprite.position.set(cx, cy);
-		sprite.alpha = 0.8;
-		sprite.scale.set(1.0);
-		sprite.tint = this.startColor;
-
-		this.particles.push({ sprite, life: PARTICLE_LIFETIME, maxLife: PARTICLE_LIFETIME });
-		this.container.addChild(sprite);
+	// Find an inactive particle in the pool and activate it
+	private activateParticle(cx: number, cy: number): void {
+		for (let i = 0; i < this.pool.length; i++) {
+			const p = this.pool[i];
+			if (p.active) continue;
+ 
+			p.active = true;
+			p.life = PARTICLE_LIFETIME;
+			p.maxLife = PARTICLE_LIFETIME;
+			p.sprite.position.set(cx, cy);
+			p.sprite.alpha = 0.8;
+			p.sprite.scale.set(1.0);
+			p.sprite.tint = this.startColor;
+			p.sprite.renderable = true;
+			return;
+		}
 	}
 
 	destroy(): void {
-		for (const p of this.particles) p.sprite.destroy({ texture: false });
-		this.particles = [];
+		// Destroy the pre-allocated sprites (only on trail teardown)
+		for (const p of this.pool) {
+			p.sprite.destroy({ texture: false });
+		}
+		this.pool = [];
 		gs.camera.removeChild(this.container);
 		this.container.destroy({ children: false });
 	}
