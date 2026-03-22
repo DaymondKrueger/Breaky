@@ -8,6 +8,7 @@ import * as C from "../../shared/constants";
 
 const MIN_PLAYERS = 1;
 const COUNTDOWN_SECONDS = 5;
+const RECONNECT_TIMEOUT = 15;
 
 interface JoinOptions  { name?: string; playerId?: string; }
 interface InputMessage { left: boolean; right: boolean; releaseBall: boolean; }
@@ -115,9 +116,23 @@ export class GameRoom extends Room<GameState> {
 		console.log(`[GameRoom] ${paddle.username} joined (team ${team}). Player ID of ${options.playerId}`);
 	}
 
-	onLeave(client: Client) {
+	async onLeave(client: Client, consented: boolean) {
 		const leavingPaddle = this.state.paddles.get(client.sessionId);
 		const leavingTeam = leavingPaddle?.team ?? 0;
+
+        // If the disconnect was unintentional during a game, hold their slot so they can reconnect within RECONNECT_TIMEOUT seconds.
+		if (this.state.phase === "playing" && !consented) {
+			try {
+				console.log(`[GameRoom] ${client.sessionId} disconnected. Waiting ${RECONNECT_TIMEOUT}s for reconnection...`);
+				await this.allowReconnection(client, RECONNECT_TIMEOUT);
+				// Player reconnected successfully, no cleanup needed
+				console.log(`[GameRoom] ${client.sessionId} reconnected.`);
+				return;
+			} catch {
+				// Timed out, player did not reconnect. Fall through to cleanup.
+				console.log(`[GameRoom] ${client.sessionId} reconnection timed out.`);
+			}
+		}
 
 		this.ballManager.removeAllForSession(client.sessionId);
 		this.state.paddles.delete(client.sessionId);
@@ -258,10 +273,12 @@ export class GameRoom extends Room<GameState> {
 		this.state.paddles.forEach((paddle, sessionId) => {
 			let input = this.inputs.get(sessionId) ?? { left: false, right: false, releaseBall: false };
 			// If we haven't heard from this client in INPUT_TIMEOUT_TICKS, treat movement as released. Prevents phantom movement when a key-release message is delayed or dropped.
-			const lastTime = this.lastInputTime.get(sessionId) ?? now;
-			if (now - lastTime > this.INPUT_TIMEOUT_TICKS * tickMs) {
-				input = { ...input, left: false, right: false };
-			}
+			if (!this.botManager.isBot(sessionId)) {
+                const lastTime = this.lastInputTime.get(sessionId) ?? now;
+                if (now - lastTime > this.INPUT_TIMEOUT_TICKS * tickMs) {
+                    input = { ...input, left: false, right: false };
+                }
+            }
 			this.paddleManager.updatePaddle(paddle, input, dt);
 		});
 
