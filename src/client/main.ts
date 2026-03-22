@@ -45,12 +45,15 @@ function resize(app: Application): void {
     canvas.style.transform = "none";
 }
 
-function cullOffScreen(children: any[], viewW: number, viewH: number): void {
-	for (const child of children) {
+function cullOffScreen(camera: Container, viewW: number): void {
+	const pivotX = camera.pivot.x;
+	const leftEdge = pivotX - 512;
+	const rightEdge = pivotX + viewW;
+ 
+	for (const child of camera.children) {
 		if (child.label === "noCull") continue;
-		const pos = child.toGlobal(new Point(0, 0));
-		child.renderable = pos.x >= -512 && pos.y >= -32 && pos.x <= viewW && pos.y <= viewH;
-		if (child.children?.length > 0) cullOffScreen(child.children, viewW, viewH);
+		const cx = (child as any).x ?? 0;
+		child.renderable = cx >= leftEdge && cx <= rightEdge;
 	}
 }
 
@@ -635,7 +638,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			gs.camera.pivot.x = Math.max(0, Math.min(gs.MAP_WIDTH - viewW, gs.camera.pivot.x));
 		}
 
-		cullOffScreen(gs.camera.children, app.renderer.width, app.renderer.height);
+		cullOffScreen(gs.camera, app.renderer.width);
 
 		const now = Date.now();
 
