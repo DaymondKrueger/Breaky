@@ -31,6 +31,10 @@ async function attemptReconnect(): Promise<boolean> {
 }
  
 function setupDisconnectHandler(room: Colyseus.Room<GameState>): void {
+    window.addEventListener("beforeunload", () => {
+		room.leave(true);
+	});
+    
 	room.onLeave((code: number) => {
 		// code 1000 = normal close (player intentionally left)... anything else = abnormal (network drop, server restart, etc.)
 		if (code > 1000 && room.reconnectionToken) {

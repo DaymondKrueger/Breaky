@@ -166,11 +166,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         inversion: "res/bricks/ability_inversion.png",
         shrinkray: "res/bricks/ability_shrink.png",
     };
-    const ABILITY_LABELS: Record<TimedAbility, string> = {
-        slowmo: "slowmo",
-        inversion: "inversion",
-        shrinkray: "shrinkray",
-    };
 
     function formatTimer(seconds: number): string {
         const s = Math.max(0, Math.ceil(seconds));
