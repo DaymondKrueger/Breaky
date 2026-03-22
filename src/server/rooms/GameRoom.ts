@@ -22,6 +22,7 @@ export class GameRoom extends Room<GameState> {
     private inputs = new Map<string, InputMessage>();
 	private releaseBall = new Map<string, boolean>();
     private paddleDir = new Map<string, number>(); // -1, 0, 1
+    private paddleTravel = new Map<string, { distance: number; lastX: number; windowStart: number }>();
 
 	private brickManager!: BrickManager;
 	private ballManager!: BallManager;
@@ -50,13 +51,26 @@ export class GameRoom extends Room<GameState> {
             const paddleW = C.PADDLE_WIDTH * paddle.scaleX;
             const minX = 34;
             const maxX = C.MAP_WIDTH - paddleW - 34;
-            const clampedX = Math.max(minX, Math.min(maxX, data.x));
+            paddle.x = Math.max(minX, Math.min(maxX, data.x));
 
-            // Check to ensure player isn't teleporting too much (allow for some network jitters)
-            const maxDrift = 80;
-            const drift = Math.abs(clampedX - paddle.x);
-            if (drift <= maxDrift) {
-                paddle.x = clampedX;
+            // Accumulate travel distance for speed-hack detection
+            const travel = this.paddleTravel.get(client.sessionId);
+            if (travel) {
+                travel.distance += Math.abs(paddle.x - travel.lastX);
+                travel.lastX = paddle.x;
+
+                const elapsed = (this.clock.currentTime - travel.windowStart) / 1000;
+                if (elapsed >= 1) {
+                    // Over the last second, how far could they have legally moved? 1.5x multiplier gives generous slack for timing jitter
+                    const maxLegalDistance = paddle.pSpeed * 60 * elapsed * 1.5;
+                    if (travel.distance > maxLegalDistance) {
+                        // TODO: Flag or kick the player
+                        console.warn(`[GameRoom] Speed hack detected for ${client.sessionId}`);
+                    }
+                    // Reset the window
+                    travel.distance = 0;
+                    travel.windowStart = this.clock.currentTime;
+                }
             }
 
             // Store direction for server-side extrapolation between messages
@@ -131,6 +145,7 @@ export class GameRoom extends Room<GameState> {
 		this.inputs.set(client.sessionId, { left: false, right: false, releaseBall: false });
         this.paddleDir.set(client.sessionId, 0);
         this.releaseBall.set(client.sessionId, false);
+        this.paddleTravel.set(client.sessionId, { distance: 0, lastX: paddle.x, windowStart: this.clock.currentTime });
 
 		console.log(`[GameRoom] ${paddle.username} joined (team ${team}). Player ID of ${options.playerId}`);
 	}
@@ -158,6 +173,7 @@ export class GameRoom extends Room<GameState> {
 		this.inputs.delete(client.sessionId);
         this.paddleDir.delete(client.sessionId);
         this.releaseBall.delete(client.sessionId);
+        this.paddleTravel.delete(client.sessionId);
 
 		if (this.state.phase === "lobby") {
 			// Cancel any countdown that was running - someone left.
