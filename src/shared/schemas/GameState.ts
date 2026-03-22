@@ -50,7 +50,7 @@ export class PaddleSchema extends Schema {
 defineTypes(PaddleSchema, {
 	x: "float32",
 	team: "uint8",
-	score: "uint8",
+	score: "uint16",
 	username: "string",
 	playerId: "string",
 	scaleX: "float32",
