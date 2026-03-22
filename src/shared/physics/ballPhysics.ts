@@ -93,8 +93,8 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 		const paddleW = C.PADDLE_WIDTH * paddle.scaleX;
 		const paddleY = paddle.team === 0 ? C.BLUE_PADDLE_Y : C.RED_PADDLE_Y;
 
-		if (rectsOverlap(ball.x, ball.y, C.BALL_WIDTH, C.BALL_HEIGHT, paddle.x, paddleY, paddleW, C.PADDLE_HEIGHT)) {
-
+		const PADDLE_MARGIN = 6;
+        if (rectsOverlap(ball.x, ball.y, C.BALL_WIDTH, C.BALL_HEIGHT, paddle.x - PADDLE_MARGIN, paddleY, paddleW + PADDLE_MARGIN * 2, C.PADDLE_HEIGHT)) {
 			// Only reverse if ball is heading toward the paddle face
 			if (paddle.team === 0 && ball.vY > 0) ball.vY *= -1;
 			if (paddle.team === 1 && ball.vY < 0) ball.vY *= -1;
