@@ -3,7 +3,7 @@ import { GameState } from "../shared/schemas/GameState";
 import { initGame } from "./main";
 import "./styles/main.scss";
 
-const SERVER_URL = process.env.NODE_ENV === "production" ? `wss://${window.location.host}` : "ws://174.2.21.52:3000";
+const SERVER_URL = process.env.NODE_ENV === "production" ? `wss://${window.location.host}` : `ws://${process.env.DEV_SERVER_URL}`;
 const client = new Colyseus.Client(SERVER_URL);
 
 document.getElementById("play-game")!.addEventListener("click", async () => {

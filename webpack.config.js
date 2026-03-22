@@ -2,6 +2,8 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
+const webpack = require("webpack");
+const dotenv = require("dotenv");
 
 module.exports = (env, argv) => {
 	const isDev = argv.mode === "development";
@@ -62,6 +64,9 @@ module.exports = (env, argv) => {
 			{ from: "src/client/res", to: "res" },
 			],
 		}),
+        new webpack.DefinePlugin({
+            "process.env.DEV_SERVER_URL": JSON.stringify(dotenv.config().parsed?.DEV_SERVER_URL || ""),
+        }),
 		...(isDev
 			? []
 			: [new MiniCssExtractPlugin({ filename: "styles.[contenthash].css" })]),
