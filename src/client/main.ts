@@ -221,6 +221,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	// Interpolation targets
 	// Remote paddles and all balls are interpolated toward server positions
 	const paddleTargetX = new Map<string, number>();
+    let lastPositionSync = 0;
+    const POSITION_SYNC_MS = 16;
 
 	// Ball prediction state
 	interface LocalBall { x: number; y: number; vX: number; vY: number; ownerSessionId: string; }
@@ -252,9 +254,15 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
     };
 
 	function sendInput(): void {
-        let flags = 0;
-        if (input.releaseBall) flags |= 1;
-        room.send("input", { x: localPaddleX, f: flags });
+        const wantsRight = localInversion ? input.left  : input.right;
+        const wantsLeft = localInversion ? input.right : input.left;
+        let d = 0;
+        if (wantsRight) d = 1;
+        if (wantsLeft) d = -1;
+
+        let f = 0;
+        if (input.releaseBall) f |= 1;
+        room.send("input", { x: localPaddleX, d, f });
     }
 
     window.addEventListener("keydown", (e: KeyboardEvent) => setKey(e, true));
@@ -513,6 +521,19 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
             myPaddle.syncLabelX(localPaddleX);
         }
 
+        // Position sync heartbeat while moving
+        const now = Date.now();
+        const POSITION_SYNC_MS = 50;
+        let lastPositionSync = 0;
+
+        // In the ticker, after local paddle movement:
+        if (myPaddle && room.state.phase === "playing" && (input.left || input.right)) {
+            if (now - lastPositionSync >= POSITION_SYNC_MS) {
+                lastPositionSync = now;
+                sendInput();
+            }
+        }
+
 		// Remote paddle interpolation
 		paddleObjects.forEach((cp, sessionId) => {
 			if (sessionId === room.sessionId) return;
@@ -587,8 +608,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		}
 
 		cullOffScreen(gs.camera, app.renderer.width);
-
-		const now = Date.now();
 
 		if (now - lastSecond > 1000) {
 			lastSecond = now;

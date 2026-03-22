@@ -10,7 +10,7 @@ const MIN_PLAYERS = 1;
 const COUNTDOWN_SECONDS = 5;
 const RECONNECT_TIMEOUT = 15;
 
-interface JoinOptions  { name?: string; playerId?: string; }
+interface JoinOptions { name?: string; playerId?: string; }
 interface InputMessage { left: boolean; right: boolean; releaseBall: boolean; }
 
 export class GameRoom extends Room<GameState> {
@@ -19,7 +19,9 @@ export class GameRoom extends Room<GameState> {
     private clockTicker: any = null;
 
 	private TICK_RATE = 60;
-	private inputs = new Map<string, InputMessage>();
+    private inputs = new Map<string, InputMessage>();
+	private releaseBall = new Map<string, boolean>();
+    private paddleDir = new Map<string, number>(); // -1, 0, 1
 
 	private brickManager!: BrickManager;
 	private ballManager!: BallManager;
@@ -38,25 +40,30 @@ export class GameRoom extends Room<GameState> {
 		this.paddleManager = new PaddleManager();
 		this.botManager = new BotManager(this.state, this.inputs);
 
-        // Client sends { x: paddlePosition, f: flags } where flags bit 0 = releaseBall
-        this.onMessage<{ x: number; f: number }>("input", (client, data) => {
+        this.onMessage<{ x: number; d: number; f: number }>("input", (client, data) => {
             if (this.state.phase !== "playing") return;
 
             const paddle = this.state.paddles.get(client.sessionId);
             if (!paddle) return;
 
-            // Validate and accept client position
+            // Validate client position
             const paddleW = C.PADDLE_WIDTH * paddle.scaleX;
             const minX = 34;
             const maxX = C.MAP_WIDTH - paddleW - 34;
-            paddle.x = Math.max(minX, Math.min(maxX, data.x));
+            const clampedX = Math.max(minX, Math.min(maxX, data.x));
 
-            // Store releaseBall flag for processing in update()
-            this.inputs.set(client.sessionId, {
-                left: false,
-                right: false,
-                releaseBall: (data.f & 1) !== 0,
-            });
+            // Check to ensure player isn't teleporting too much (allow for some network jitters)
+            const maxDrift = 80;
+            const drift = Math.abs(clampedX - paddle.x);
+            if (drift <= maxDrift) {
+                paddle.x = clampedX;
+            }
+
+            // Store direction for server-side extrapolation between messages
+            const d = data.d;
+            this.paddleDir.set(client.sessionId, d === -1 ? -1 : d === 1 ? 1 : 0);
+
+            this.releaseBall.set(client.sessionId, (data.f & 1) !== 0);
         });
 
 		this.onMessage("ready", (client) => {
@@ -122,6 +129,8 @@ export class GameRoom extends Room<GameState> {
 
 		this.state.paddles.set(client.sessionId, paddle);
 		this.inputs.set(client.sessionId, { left: false, right: false, releaseBall: false });
+        this.paddleDir.set(client.sessionId, 0);
+        this.releaseBall.set(client.sessionId, false);
 
 		console.log(`[GameRoom] ${paddle.username} joined (team ${team}). Player ID of ${options.playerId}`);
 	}
@@ -147,6 +156,8 @@ export class GameRoom extends Room<GameState> {
 		this.ballManager.removeAllForSession(client.sessionId);
 		this.state.paddles.delete(client.sessionId);
 		this.inputs.delete(client.sessionId);
+        this.paddleDir.delete(client.sessionId);
+        this.releaseBall.delete(client.sessionId);
 
 		if (this.state.phase === "lobby") {
 			// Cancel any countdown that was running - someone left.
@@ -279,18 +290,30 @@ export class GameRoom extends Room<GameState> {
 
 		this.state.paddles.forEach((paddle, sessionId) => {
             if (this.botManager.isBot(sessionId)) {
+                // Bots still use directional input
                 const input = this.inputs.get(sessionId) ?? { left: false, right: false, releaseBall: false };
                 this.paddleManager.updatePaddle(paddle, input, dt);
+            } else {
+                // Human paddles: extrapolate using stored direction
+                const dir = this.paddleDir.get(sessionId) ?? 0;
+                if (dir !== 0) {
+                    const paddleW = C.PADDLE_WIDTH * paddle.scaleX;
+                    const minX = 34;
+                    const maxX = C.MAP_WIDTH - paddleW - 34;
+                    paddle.x = Math.max(minX, Math.min(maxX, paddle.x + dir * paddle.pSpeed * dt));
+                }
             }
         });
 
         // Release any balls for players pressing space
-		this.state.paddles.forEach((_paddle, sessionId) => {
-			const input = this.inputs.get(sessionId);
-			if (input?.releaseBall && this.ballManager.hasUnreleasedBall(sessionId)) {
-				this.ballManager.releaseBall(sessionId);
-			}
-		});
+        this.state.paddles.forEach((_paddle, sessionId) => {
+            const wantsRelease = this.botManager.isBot(sessionId)
+                ? this.inputs.get(sessionId)?.releaseBall
+                : this.releaseBall.get(sessionId);
+            if (wantsRelease && this.ballManager.hasUnreleasedBall(sessionId)) {
+                this.ballManager.releaseBall(sessionId);
+            }
+        });
 
         let shakeNeeded = false;
 		// updateAll returns ball IDs that left the field this tick.
