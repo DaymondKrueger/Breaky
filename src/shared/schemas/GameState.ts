@@ -23,6 +23,7 @@ export class BallSchema extends Schema {
 	vX: number = 0;
 	vY: number = 0;
 	ownerSessionId: string = "";
+    napalm: boolean = false;
 }
 defineTypes(BallSchema, {
 	x: "float32",
@@ -30,6 +31,7 @@ defineTypes(BallSchema, {
 	vX: "float32",
 	vY: "float32",
 	ownerSessionId: "string",
+    napalm: "boolean",
 });
 
 export class PaddleSchema extends Schema {

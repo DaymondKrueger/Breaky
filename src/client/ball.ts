@@ -25,6 +25,11 @@ export class ClientBall {
 		// Trail colour follows the owner's team: team 0 = blue, team 1 = red
 		this.trail = new BallTrail(ownerTeam === 0 ? "blue" : "red");
 
+        this.trail.setNapalm(schema.napalm);
+		schema.listen("napalm", (val: boolean) => {
+			this.trail.setNapalm(val);
+		});
+
 		gs.camera.addChild(this.sprite);
 	}
 

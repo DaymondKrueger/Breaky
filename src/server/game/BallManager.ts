@@ -4,8 +4,6 @@ import { stepBall, BallStepCallbacks } from "../../shared/physics/ballPhysics";
 import * as C from "../../shared/constants";
 
 export class BallManager {
-	// Server-only: napalm state is never sent to clients
-	private ballNapalm = new Map<string, boolean>();
 	private ballReleased = new Map<string, boolean>(); // false = stuck, true = in play
 	private nextBallId = 0;
 
@@ -20,14 +18,12 @@ export class BallManager {
 		ball.vX = 0;
 		ball.vY = 0;
 		this.state.balls.set(ballId, ball);
-		this.ballNapalm.set(ballId, false);
 		this.ballReleased.set(ballId, false);
 		return ballId;
 	}
 
 	removeBall(ballId: string): void {
 		this.state.balls.delete(ballId);
-		this.ballNapalm.delete(ballId);
 		this.ballReleased.delete(ballId);
 	}
 
@@ -79,7 +75,7 @@ export class BallManager {
 		const ball = this.state.balls.get(ballId)!;
 		const ownerPaddle = this.state.paddles.get(ball.ownerSessionId);
 		const ownerTeam = ownerPaddle?.team ?? 0;
-		const napalm = this.ballNapalm.get(ballId) ?? false;
+		const napalm = ball.napalm;
 
         // Ball is stuck to the paddle
 		if (!this.ballReleased.get(ballId)) {
@@ -101,7 +97,7 @@ export class BallManager {
 						if (napalm) {
 							ownerPaddle.score += 5;
 							this.bricks.ownBrick(brick, ball.ownerSessionId);
-							this.ballNapalm.set(ballId, false);
+							ball.napalm = false;
 						} else if (brick.health > 1) {
 							brick.health--;
 						} else {
@@ -121,7 +117,7 @@ export class BallManager {
 					}
 					case BrickTypes.INDESTRUCT: break;
 					case BrickTypes.NAPALM: {
-						this.ballNapalm.set(ballId, true);
+						ball.napalm = true;
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;
 					}

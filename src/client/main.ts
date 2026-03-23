@@ -597,7 +597,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			cb.sprite.y = local.y;
 
 			// Update the ball particle trail at the final resolved position
-			cb.trail.update(cb.sprite.x, cb.sprite.y, C.BALL_WIDTH, C.BALL_WIDTH, dt);
+			cb.trail.update(cb.sprite.x, cb.sprite.y, C.BALL_WIDTH, C.BALL_WIDTH, local.vX, local.vY, dt);
 		});
 
 		// Camera follows local paddle
