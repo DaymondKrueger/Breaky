@@ -132,20 +132,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 	gs.leaderboard = new Leaderboard();
 
-	const ua = navigator.userAgent.toLowerCase();
-	const isMobile = ua.includes("mobile") || ua.includes("android");
-	if (isMobile) {
-		const lArrow = new Sprite(Texture.from("mobileArrow"));
-		lArrow.scale.x = -1; lArrow.anchor.set(1, 0);
-		lArrow.x = 30; lArrow.y = gs.HEIGHT / 2 - lArrow.height / 2;
-		gs.HUD.addChild(lArrow);
-		const rArrow = new Sprite(Texture.from("mobileArrow"));
-		rArrow.anchor.set(1, 0);
-		rArrow.x = app.renderer.width - 30;
-		rArrow.y = app.renderer.height / 2 - rArrow.height / 2;
-		gs.HUD.addChild(rArrow);
-	}
-
 	// HTML elements
 	const mainMenu = document.getElementById("main-menu")!;
 	const lobbyContent = document.getElementById("lobby-content")!;
@@ -159,6 +145,15 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const rematchStatus = document.getElementById("rematch-status")!;
 	const hudPing = document.getElementById("hud-ping")!;
 	const hudPowerups = document.getElementById("hud-powerups")!;
+	const hudMobileArrows = document.getElementById("hud-mobile-arrows")!;
+
+	const ua = navigator.userAgent.toLowerCase();
+	const isMobile = ua.includes("mobile") || ua.includes("android");
+	if (isMobile) {
+        hudMobileArrows.style.display = "flex";
+	} else {
+        hudMobileArrows.style.display = "none";
+    }
 
 	type TimedAbility = "slowmo" | "inversion" | "shrinkray";
 	const ABILITY_IMAGES: Record<TimedAbility, string> = {

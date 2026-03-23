@@ -34,7 +34,6 @@ const ASSET_MANIFEST = [
 	// HUD
 	{ alias: "leaderboard_bg", src: "res/leaderboard_bg.png" },
 	{ alias: "healthBar", src: "res/leaderboard_healthbar.png" },
-	{ alias: "mobileArrow", src: "res/arrow.png" },
 
     // VFX spritesheets
 	{ alias: "napalmTrail", src: "res/vfx/fx_napalmTrail.png" },
