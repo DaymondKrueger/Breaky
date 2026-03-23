@@ -246,6 +246,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		KeyD: "right",
 		ArrowLeft: "left",
 		KeyA: "left",
+        KeyW: "releaseBall",
+        ArrowUp: "releaseBall",
 		Space: "releaseBall",
 	};
 
