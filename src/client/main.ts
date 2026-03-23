@@ -513,7 +513,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			const maxX = C.MAP_WIDTH - paddleW - 34;
 
 			const wantsRight = localInversion ? input.left : input.right;
-			const wantsLeft  = localInversion ? input.right : input.left;
+			const wantsLeft = localInversion ? input.right : input.left;
 
 			if (wantsRight) localPaddleX += localPSpeed * dt;
 			if (wantsLeft) localPaddleX -= localPSpeed * dt;

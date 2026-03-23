@@ -104,7 +104,7 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 			let hit = (centerBallX - paddle.x - paddleW / 2) / (paddleW / 2);
 			hit = clamp(hit, -1, 1);
 			// Avoid pure-vertical shots at dead centre
-			if (hit >  0.45 && hit <  0.5)  hit -= 0.05;
+			if (hit >  0.45 && hit <  0.5) hit -= 0.05;
 			if (hit >= 0.5  && hit <  0.55) hit += 0.05;
 			ball.vX += 3 * hit;
 
