@@ -37,13 +37,24 @@ function rectsOverlap(ax: number, ay: number, aw: number, ah: number, bx: number
 	return ax + aw > bx && ax < bx + bw && ay + ah > by && ay < by + bh;
 }
 
-function bounceAndDepenetrate(ball: BallState, brick: PhysicsBrick): void {
-	const overlapX = ball.vX > 0 ? (ball.x + C.BALL_WIDTH) - brick.x : (brick.x + C.BRICK_WIDTH) - ball.x;
-	const overlapY = ball.vY > 0 ? (ball.y + C.BALL_HEIGHT) - brick.y : (brick.y + C.BRICK_HEIGHT) - ball.y;
-	const normX = overlapX / (Math.abs(ball.vX) || 0.001);
-	const normY = overlapY / (Math.abs(ball.vY) || 0.001);
- 
-	if (normY <= normX) {
+// axis override: "y" = force vertical bounce, "x" = force horizontal, null = use heuristic
+function bounceAndDepenetrate(ball: BallState, brick: PhysicsBrick, axisOverride: "x" | "y" | null): void {
+	let bounceY: boolean;
+
+	if (axisOverride === "y") {
+		bounceY = true;
+	} else if (axisOverride === "x") {
+		bounceY = false;
+	} else {
+		// Single-brick hit: use penetration-depth heuristic
+		const overlapX = ball.vX > 0 ? (ball.x + C.BALL_WIDTH) - brick.x : (brick.x + C.BRICK_WIDTH) - ball.x;
+		const overlapY = ball.vY > 0 ? (ball.y + C.BALL_HEIGHT) - brick.y : (brick.y + C.BRICK_HEIGHT) - ball.y;
+		const normX = overlapX / (Math.abs(ball.vX) || 0.001);
+		const normY = overlapY / (Math.abs(ball.vY) || 0.001);
+		bounceY = normY <= normX;
+	}
+
+	if (bounceY) {
 		ball.vY *= -1;
 		if (ball.vY < 0) {
 			ball.y = brick.y - C.BALL_HEIGHT;
@@ -104,8 +115,8 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 			let hit = (centerBallX - paddle.x - paddleW / 2) / (paddleW / 2);
 			hit = clamp(hit, -1, 1);
 			// Avoid pure-vertical shots at dead centre
-			if (hit >  0.45 && hit <  0.5) hit -= 0.05;
-			if (hit >= 0.5  && hit <  0.55) hit += 0.05;
+			if (hit > 0.45 && hit < 0.5) hit -= 0.05;
+			if (hit >= 0.5 && hit < 0.55) hit += 0.05;
 			ball.vX += 3 * hit;
 
 			// Depenetrate: push ball flush against paddle face
@@ -117,22 +128,68 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 		}
 	}
 
-	// One hit per tick (break after first). Depenetration inside bounceAndDepenetrate ensures the ball is outside the brick next tick so no cooldown is needed.
+	const hitIndices: number[] = [];
 	for (let i = 0; i < bricks.length; i++) {
 		const brick = bricks[i];
 		if (!brick) continue;
 
-		// Skip friendly-owned bricks (blue ball skips type-11 blue bricks, etc.)
-		const friendly =
-			(ownerTeam === 0 && brick.brickType === 11) ||
-			(ownerTeam === 1 && brick.brickType === 12);
+		const friendly = (ownerTeam === 0 && brick.brickType === 11) || (ownerTeam === 1 && brick.brickType === 12);
 		if (friendly) continue;
 
 		if (!rectsOverlap(ball.x, ball.y, C.BALL_WIDTH, C.BALL_HEIGHT, brick.x, brick.y, C.BRICK_WIDTH, C.BRICK_HEIGHT)) continue;
 
-		bounceAndDepenetrate(ball, brick);
-		callbacks.onBrickHit(i);
-		break;
+		hitIndices.push(i);
+	}
+
+	if (hitIndices.length > 0) {
+		// Determine axis override by checking if any two hits are neighbours.
+		// Also track the collision face so we only damage bricks on that face (not corner-clipped bricks from an adjacent row/column).
+		let axisOverride: "x" | "y" | null = null;
+		let faceValue = -1; // the shared y (for horiz pair) or x (for vert pair)
+
+		if (hitIndices.length >= 2) {
+			const horizStep = C.BRICK_WIDTH + C.BRICK_GAP; // x delta for side-by-side
+			const vertStep = C.BRICK_HEIGHT + C.BRICK_GAP; // y delta for stacked
+
+			outer:
+			for (let a = 0; a < hitIndices.length; a++) {
+				const ba = bricks[hitIndices[a]]!;
+				for (let b = a + 1; b < hitIndices.length; b++) {
+					const bb = bricks[hitIndices[b]]!;
+					const dx = Math.abs(ba.x - bb.x);
+					const dy = Math.abs(ba.y - bb.y);
+
+					if (dy < 1 && Math.abs(dx - horizStep) < 1) {
+						// Same row, side-by-side = ball came from above/below
+						axisOverride = "y";
+						faceValue = ba.y;
+						break outer;
+					}
+					if (dx < 1 && Math.abs(dy - vertStep) < 1) {
+						// Same column, stacked = ball came from the side
+						axisOverride = "x";
+						faceValue = ba.x;
+						break outer;
+					}
+				}
+			}
+		}
+
+		// Bounce off the first hit brick, with the axis override if detected
+		const firstBrick = bricks[hitIndices[0]]!;
+		bounceAndDepenetrate(ball, firstBrick, axisOverride);
+
+		// Fire callbacks. Only for bricks on the collision face when an adjacent pair was found, so corner-clipped bricks are ignored.
+		for (const idx of hitIndices) {
+			if (axisOverride === "y") {
+				// Only hit bricks in the same row as the adjacent pair
+				if (Math.abs(bricks[idx]!.y - faceValue) > 1) continue;
+			} else if (axisOverride === "x") {
+				// Only hit bricks in the same column as the adjacent pair
+				if (Math.abs(bricks[idx]!.x - faceValue) > 1) continue;
+			}
+			callbacks.onBrickHit(idx);
+		}
 	}
 
 	ball.vX = clamp(ball.vX, -MAX_SPEED, MAX_SPEED);
