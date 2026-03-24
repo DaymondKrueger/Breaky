@@ -15,11 +15,12 @@ const MAX_PARTICLES = 120; // hard cap per trail
 
 // Napalm trail settings
 const NAPALM_SCALE = 0.08; // 512x900 frames scaled down to trail size
-const NAPALM_GHOST_COUNT = 6; // afterimages behind the lead
-// Offset between each ghost
-const NAPALM_GHOST_OFFSET = 20;
-// How fast the trail rotation catches up (0 = frozen, 1 = instant snap)
-const NAPALM_ROTATION_LERP = 0.05;
+// How often a napalm imprint is stamped down (seconds)
+const NAPALM_IMPRINT_INTERVAL = 0.05;
+// How long each imprint lingers before fully faded (seconds)
+const NAPALM_IMPRINT_LIFETIME = 0.4;
+// Max pooled imprints (should comfortably cover lifetime / interval)
+const MAX_NAPALM_IMPRINTS = 8;
 
 let _napalmSheet: SpriteSheetFrames | null = null;
 
@@ -39,7 +40,15 @@ interface TrailParticle {
 	sprite: Sprite;
 	life: number; // remaining lifetime (seconds)
 	maxLife: number; // total lifetime (seconds)
-    active: boolean; // is particle currently in use
+	active: boolean; // is particle currently in use
+}
+
+interface NapalmImprint {
+	sprite: Sprite;
+	life: number; // remaining lifetime (seconds)
+	maxLife: number;
+	elapsed: number; // animation clock (seconds)
+	active: boolean;
 }
 
 function lerpColor(from: number, to: number, t: number): number {
@@ -57,14 +66,16 @@ export class BallTrail {
 	private startColor: number;
 	private endColor: number;
 
-	// Napalm trail: lead sprite + ghost afterimages offset behind it
+	// Napalm: lead sprite that follows the ball
 	private napalmSprite: Sprite;
-	private napalmGhosts: Sprite[] = [];
 	private napalmSheet: SpriteSheetFrames;
 	private napalmElapsed = 0;
 	private _napalmActive = false;
-	private napalmSmoothedRotation = 0;
-	private napalmRotationSeeded = false;
+	private napalmRotation = 0;
+
+	// Napalm: imprint pool — stamps left behind that fade out
+	private imprintPool: NapalmImprint[] = [];
+	private imprintEmitAccum = 0;
 
 	constructor(teamColor: "blue" | "red") {
 		const colours = TRAIL_COLOURS[teamColor];
@@ -72,10 +83,10 @@ export class BallTrail {
 		this.endColor = colours.end;
 
 		this.container = new Container();
-        this.container.label = "noCull";
+		this.container.label = "noCull";
 		this.napalmSheet = getNapalmSheet();
 
-        // Pre-allocate normal particle pool
+		// Pre-allocate normal particle pool
 		for (let i = 0; i < MAX_PARTICLES; i++) {
 			const sprite = new Sprite(getTrailTexture());
 			sprite.anchor.set(0.5);
@@ -84,17 +95,17 @@ export class BallTrail {
 			this.pool.push({ sprite, life: 0, maxLife: PARTICLE_LIFETIME, active: false });
 		}
 
-		// Ghost afterimages (added first so they render behind the lead sprite)
-		for (let i = 0; i < NAPALM_GHOST_COUNT; i++) {
-			const ghost = new Sprite(this.napalmSheet.frames[0]);
-			ghost.anchor.set(0.5, 0.15);
-			ghost.scale.set(NAPALM_SCALE);
-			ghost.renderable = false;
-			this.container.addChild(ghost);
-			this.napalmGhosts.push(ghost);
+		// Pre-allocate napalm imprint pool (rendered behind the lead sprite)
+		for (let i = 0; i < MAX_NAPALM_IMPRINTS; i++) {
+			const sprite = new Sprite(this.napalmSheet.frames[0]);
+			sprite.anchor.set(0.5, 0.15);
+			sprite.scale.set(NAPALM_SCALE);
+			sprite.renderable = false;
+			this.container.addChild(sprite);
+			this.imprintPool.push({ sprite, life: 0, maxLife: NAPALM_IMPRINT_LIFETIME, elapsed: 0, active: false });
 		}
 
-		// Lead napalm trail sprite (rendered on top of ghosts)
+		// Lead napalm trail sprite (rendered on top of imprints)
 		this.napalmSprite = new Sprite(this.napalmSheet.frames[0]);
 		this.napalmSprite.anchor.set(0.5, 0.15);
 		this.napalmSprite.scale.set(NAPALM_SCALE);
@@ -112,12 +123,11 @@ export class BallTrail {
 
 		if (active) {
 			this.napalmElapsed = 0;
-			this.napalmRotationSeeded = false;
+			this.imprintEmitAccum = 0;
 			this.napalmSprite.renderable = true;
-			for (const ghost of this.napalmGhosts) ghost.renderable = true;
 		} else {
 			this.napalmSprite.renderable = false;
-			for (const ghost of this.napalmGhosts) ghost.renderable = false;
+			// Imprints keep ticking so they fade out naturally
 		}
 	}
 
@@ -127,43 +137,25 @@ export class BallTrail {
 		const cy = y + ballH / 2;
 
 		if (this._napalmActive) {
-			// Advance animation
+			// Advance lead animation
 			this.napalmElapsed += dtSec;
 			const { texture } = this.napalmSheet.getFrameAtTime(this.napalmElapsed);
 
-			// Smoothly rotate toward travel direction
+			// Snap rotation to travel direction
 			if (vX !== 0 || vY !== 0) {
-				const targetRotation = Math.atan2(vY, vX) + Math.PI / 2;
-				if (!this.napalmRotationSeeded) {
-					this.napalmSmoothedRotation = targetRotation;
-					this.napalmRotationSeeded = true;
-				} else {
-					// Shortest-path angle difference
-					let delta = targetRotation - this.napalmSmoothedRotation;
-					delta = ((delta + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
-					this.napalmSmoothedRotation += delta * NAPALM_ROTATION_LERP;
-				}
+				this.napalmRotation = Math.atan2(vY, vX) + Math.PI / 2;
 			}
-			const rotation = this.napalmSmoothedRotation;
 
 			// Update lead sprite
 			this.napalmSprite.texture = texture;
 			this.napalmSprite.position.set(cx, cy);
-			this.napalmSprite.rotation = rotation;
+			this.napalmSprite.rotation = this.napalmRotation;
 
-			const behindAngle = rotation - Math.PI / 2 + Math.PI;
-			const dirX = Math.cos(behindAngle);
-			const dirY = Math.sin(behindAngle);
-
-			// Place ghosts along the behind direction with halving opacity
-			for (let i = 0; i < NAPALM_GHOST_COUNT; i++) {
-				const ghost = this.napalmGhosts[i];
-				const dist = (i + 1) * NAPALM_GHOST_OFFSET;
-				ghost.position.set(cx + dirX * dist, cy + dirY * dist);
-				ghost.rotation = rotation;
-				ghost.texture = texture;
-				// Each ghost is 50% the opacity of the one before it
-				ghost.alpha = 1 / Math.pow(2, i + 1);
+			// Emit imprints at regular intervals
+			this.imprintEmitAccum += dtSec;
+			while (this.imprintEmitAccum >= NAPALM_IMPRINT_INTERVAL) {
+				this.imprintEmitAccum -= NAPALM_IMPRINT_INTERVAL;
+				this.activateImprint(cx, cy, this.napalmRotation, this.napalmElapsed);
 			}
 
 			// Pause normal emission so it doesn't burst on switch-back
@@ -175,6 +167,7 @@ export class BallTrail {
 				this.emitAccum -= EMIT_INTERVAL;
 				this.activateParticle(cx, cy);
 			}
+			this.imprintEmitAccum = 0;
 		}
 
 		// Always tick normal particles so existing ones fade out after switching to napalm
@@ -194,6 +187,30 @@ export class BallTrail {
 			p.sprite.alpha = 0.8 * (1 - t);
 			p.sprite.scale.set(1.0 - t * 0.85);
 			p.sprite.tint = lerpColor(this.startColor, this.endColor, t);
+		}
+
+		// Always tick napalm imprints so they fade out even after napalm deactivates
+		const sheet = this.napalmSheet;
+		for (let i = 0; i < this.imprintPool.length; i++) {
+			const imp = this.imprintPool[i];
+			if (!imp.active) continue;
+
+			imp.life -= dtSec;
+
+			if (imp.life <= 0) {
+				imp.active = false;
+				imp.sprite.renderable = false;
+				continue;
+			}
+
+			// Continue animating the fire in place
+			imp.elapsed += dtSec;
+			const { texture } = sheet.getFrameAtTime(imp.elapsed);
+			imp.sprite.texture = texture;
+
+			// Fade out over lifetime
+			const t = 1 - imp.life / imp.maxLife; // 0 = fresh, 1 = dying
+			imp.sprite.alpha = 1 - t;
 		}
 	}
 
@@ -215,16 +232,36 @@ export class BallTrail {
 		}
 	}
 
+	// Stamp down a napalm imprint at the current position/rotation
+	private activateImprint(cx: number, cy: number, rotation: number, elapsed: number): void {
+		for (let i = 0; i < this.imprintPool.length; i++) {
+			const imp = this.imprintPool[i];
+			if (imp.active) continue;
+
+			imp.active = true;
+			imp.life = NAPALM_IMPRINT_LIFETIME;
+			imp.maxLife = NAPALM_IMPRINT_LIFETIME;
+			imp.elapsed = elapsed; // start from the lead sprite's current animation time
+			imp.sprite.position.set(cx, cy);
+			imp.sprite.rotation = rotation;
+			imp.sprite.texture = this.napalmSheet.getFrameAtTime(elapsed).texture;
+			imp.sprite.alpha = 1;
+			imp.sprite.scale.set(NAPALM_SCALE);
+			imp.sprite.renderable = true;
+			return;
+		}
+	}
+
 	destroy(): void {
 		for (const p of this.pool) {
 			p.sprite.destroy({ texture: false });
 		}
 		this.napalmSprite.destroy({ texture: false });
-		for (const ghost of this.napalmGhosts) {
-			ghost.destroy({ texture: false });
+		for (const imp of this.imprintPool) {
+			imp.sprite.destroy({ texture: false });
 		}
 		this.pool = [];
-		this.napalmGhosts = [];
+		this.imprintPool = [];
 		gs.camera.removeChild(this.container);
 		this.container.destroy({ children: false });
 	}
