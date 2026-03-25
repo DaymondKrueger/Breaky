@@ -1,8 +1,6 @@
 import * as C from "../constants";
 
 // Interfaces
-// Minimal shapes so BallSchema / BrickSchema / PaddleSchema are accepted structurally without importing schema classes here
-
 export interface BallState {
 	x: number;
 	y: number;
@@ -28,7 +26,6 @@ export interface BallStepCallbacks {
 	onBrickHit(brickIndex: number, hitSide: HitSide, contactX: number, contactY: number): void;
 }
 
-// Hard cap on ball speed to prevent runaway turbo stacking
 const MAX_SPEED = 25;
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -78,10 +75,24 @@ function bounceAndDepenetrate(ball: BallState, brick: PhysicsBrick, axisOverride
 	}
 }
 
+const BRICK_STEP_X = C.BRICK_WIDTH + C.BRICK_GAP;
+const GRID_ORIGIN_X = 40;
+
+// Pre-computed row Y positions (must match BrickManager.spawnMap)
+const ROW_YS: number[] = [
+	C.HEIGHT / 2 - 96 - C.BRICK_HEIGHT - C.BRICK_GAP * 2,
+	C.HEIGHT / 2 - 60 - C.BRICK_HEIGHT - C.BRICK_GAP,
+	C.HEIGHT / 2 - 24 - C.BRICK_HEIGHT,
+	C.HEIGHT / 2 + 24,
+	C.HEIGHT / 2 + 60 + C.BRICK_GAP,
+	C.HEIGHT / 2 + 96 + C.BRICK_GAP * 2,
+];
+const NUM_ROWS = 6;
+
+const _hitBuf: number[] = [];
+
 /**
  * Advance one physics tick for a single ball.
- *
- * Mutates `ball` in place (x, y, vX, vY).
  * Returns "destroy" if the ball has left the field (fell into a goal).
  *
  * @param ball Mutable ball state. Can be a plain object or a BallSchema
@@ -90,8 +101,9 @@ function bounceAndDepenetrate(ball: BallState, brick: PhysicsBrick, axisOverride
  * @param ownerTeam 0 = blue, 1 = red. Used to skip friendly-owned bricks
  * @param dt Ticker delta (1.0 at 60 fps)
  * @param callbacks Side-effect hooks. No-op on client, game-logic on server
+ * @param bricksPerLine Number of bricks in one row (for grid lookup). Pass 0 to fall back to brute-force scan.
  */
-export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undefined>, paddle: PhysicsPaddle | null, ownerTeam: number, dt: number, callbacks: BallStepCallbacks,): "ok" | "destroy" {
+export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undefined>, paddle: PhysicsPaddle | null, ownerTeam: number, dt: number, callbacks: BallStepCallbacks, bricksPerLine: number = 0): "ok" | "destroy" {
 	ball.x += ball.vX * dt;
 	ball.y += ball.vY * dt;
 
@@ -101,10 +113,10 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 
 	if (ball.x <= C.WALL_LEFT) {
 		ball.vX = Math.abs(ball.vX); // force rightward
-		ball.x  = C.WALL_LEFT;
+		ball.x = C.WALL_LEFT;
 	} else if (ball.x >= C.MAP_WIDTH - C.WALL_LEFT - C.BALL_WIDTH) {
 		ball.vX = -Math.abs(ball.vX); // force leftward
-		ball.x  = C.MAP_WIDTH - C.WALL_LEFT - C.BALL_WIDTH;
+		ball.x = C.MAP_WIDTH - C.WALL_LEFT - C.BALL_WIDTH;
 	}
 
 	if (paddle) {
@@ -112,7 +124,7 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 		const paddleY = paddle.team === 0 ? C.BLUE_PADDLE_Y : C.RED_PADDLE_Y;
 
 		const PADDLE_MARGIN = 6;
-        if (rectsOverlap(ball.x, ball.y, C.BALL_WIDTH, C.BALL_HEIGHT, paddle.x - PADDLE_MARGIN, paddleY, paddleW + PADDLE_MARGIN * 2, C.PADDLE_HEIGHT)) {
+		if (rectsOverlap(ball.x, ball.y, C.BALL_WIDTH, C.BALL_HEIGHT, paddle.x - PADDLE_MARGIN, paddleY, paddleW + PADDLE_MARGIN * 2, C.PADDLE_HEIGHT)) {
 			// Only reverse if ball is heading toward the paddle face
 			if (paddle.team === 0 && ball.vY > 0) ball.vY *= -1;
 			if (paddle.team === 1 && ball.vY < 0) ball.vY *= -1;
@@ -135,34 +147,63 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 		}
 	}
 
-	const hitIndices: number[] = [];
-	for (let i = 0; i < bricks.length; i++) {
-		const brick = bricks[i];
-		if (!brick) continue;
+	_hitBuf.length = 0;
 
-		const friendly = (ownerTeam === 0 && brick.brickType === 11) || (ownerTeam === 1 && brick.brickType === 12);
-		if (friendly) continue;
+	if (bricksPerLine > 0) {
+		const ballLeft = ball.x;
+		const ballRight = ball.x + C.BALL_WIDTH;
+		const ballTop = ball.y;
+		const ballBottom = ball.y + C.BALL_HEIGHT;
 
-		if (!rectsOverlap(ball.x, ball.y, C.BALL_WIDTH, C.BALL_HEIGHT, brick.x, brick.y, C.BRICK_WIDTH, C.BRICK_HEIGHT)) continue;
+		const colMin = Math.max(0, Math.floor((ballLeft - GRID_ORIGIN_X) / BRICK_STEP_X));
+		const colMax = Math.min(bricksPerLine - 1, Math.floor((ballRight - GRID_ORIGIN_X) / BRICK_STEP_X));
 
-		hitIndices.push(i);
+		for (let row = 0; row < NUM_ROWS; row++) {
+			const rowY = ROW_YS[row];
+			if (ballBottom <= rowY || ballTop >= rowY + C.BRICK_HEIGHT) continue;
+
+			for (let col = colMin; col <= colMax; col++) {
+				const idx = col + row * bricksPerLine;
+				const brick = bricks[idx];
+				if (!brick) continue;
+
+				const friendly = (ownerTeam === 0 && brick.brickType === 11) || (ownerTeam === 1 && brick.brickType === 12);
+				if (friendly) continue;
+
+				if (!rectsOverlap(ball.x, ball.y, C.BALL_WIDTH, C.BALL_HEIGHT, brick.x, brick.y, C.BRICK_WIDTH, C.BRICK_HEIGHT)) continue;
+
+				_hitBuf.push(idx);
+			}
+		}
+	} else {
+		for (let i = 0; i < bricks.length; i++) {
+			const brick = bricks[i];
+			if (!brick) continue;
+
+			const friendly = (ownerTeam === 0 && brick.brickType === 11) || (ownerTeam === 1 && brick.brickType === 12);
+			if (friendly) continue;
+
+			if (!rectsOverlap(ball.x, ball.y, C.BALL_WIDTH, C.BALL_HEIGHT, brick.x, brick.y, C.BRICK_WIDTH, C.BRICK_HEIGHT)) continue;
+
+			_hitBuf.push(i);
+		}
 	}
 
-	if (hitIndices.length > 0) {
+	if (_hitBuf.length > 0) {
 		// Determine axis override by checking if any two hits are neighbours.
 		// Also track the collision face so we only damage bricks on that face (not corner-clipped bricks from an adjacent row/column).
 		let axisOverride: "x" | "y" | null = null;
 		let faceValue = -1; // the shared y (for horiz pair) or x (for vert pair)
 
-		if (hitIndices.length >= 2) {
+		if (_hitBuf.length >= 2) {
 			const horizStep = C.BRICK_WIDTH + C.BRICK_GAP; // x delta for side-by-side
 			const vertStep = C.BRICK_HEIGHT + C.BRICK_GAP; // y delta for stacked
 
 			outer:
-			for (let a = 0; a < hitIndices.length; a++) {
-				const ba = bricks[hitIndices[a]]!;
-				for (let b = a + 1; b < hitIndices.length; b++) {
-					const bb = bricks[hitIndices[b]]!;
+			for (let a = 0; a < _hitBuf.length; a++) {
+				const ba = bricks[_hitBuf[a]]!;
+				for (let b = a + 1; b < _hitBuf.length; b++) {
+					const bb = bricks[_hitBuf[b]]!;
 					const dx = Math.abs(ba.x - bb.x);
 					const dy = Math.abs(ba.y - bb.y);
 
@@ -183,7 +224,7 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 		}
 
 		// Bounce off the first hit brick, with the axis override if detected
-		const firstBrick = bricks[hitIndices[0]]!;
+		const firstBrick = bricks[_hitBuf[0]]!;
 		const hitSide = bounceAndDepenetrate(ball, firstBrick, axisOverride);
 
 		// Compute the contact point on the brick surface
@@ -212,7 +253,7 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 		}
 
 		// Fire callbacks. Only for bricks on the collision face when an adjacent pair was found, so corner-clipped bricks are ignored.
-		for (const idx of hitIndices) {
+		for (const idx of _hitBuf) {
 			if (axisOverride === "y") {
 				// Only hit bricks in the same row as the adjacent pair
 				if (Math.abs(bricks[idx]!.y - faceValue) > 1) continue;

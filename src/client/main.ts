@@ -685,7 +685,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
                         scale: BRICK_HIT_VFX_SCALE,
                     });
 				},
-			});
+			}, room.state.bricksPerLine);
 
 			// Position correction toward server.
 			if (server) {

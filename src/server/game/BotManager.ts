@@ -26,9 +26,8 @@ export class BotManager {
 
 	/**
 	 * Called once at game start.
-	 * Counts players per team and adds bots to whichever side is short
-	 * so both teams have the same count.
-	 * Only touches state.paddles and spawns balls — never called in lobby.
+	 * Counts players per team and adds bots to whichever side is short so both teams have the same count.
+	 * Only touches state.paddles and spawns balls, never called in lobby.
 	 */
 	balanceTeams(ballManager: BallManager): void {
 		const teamCount = [0, 0];

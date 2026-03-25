@@ -173,7 +173,7 @@ export class BallManager {
 			},
 		};
 
-		const result = stepBall(ball, this.state.bricks, ownerPaddle ?? null, ownerTeam, dt, callbacks,);
+		const result = stepBall(ball, this.state.bricks, ownerPaddle ?? null, ownerTeam, dt, callbacks, this.state.bricksPerLine);
 
 		if (result === "destroy") {
 			if (ownerPaddle) {
