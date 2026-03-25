@@ -1,6 +1,6 @@
 import { GameState, BallSchema, PaddleSchema } from "../../shared/schemas/GameState";
 import { BrickManager, BrickTypes } from "./BrickManager";
-import { stepBall, BallStepCallbacks } from "../../shared/physics/ballPhysics";
+import { stepBall, BallStepCallbacks, HitSide } from "../../shared/physics/ballPhysics";
 import * as C from "../../shared/constants";
 
 export class BallManager {
@@ -41,10 +41,10 @@ export class BallManager {
 		for (const ballId of toRemove) this.removeBall(ballId);
 	}
 
-	updateAll(dt: number, broadcastShake: () => void): string[] {
+	updateAll(dt: number, broadcastShake: () => void, broadcastBrickHit: (hitSide: HitSide, contactX: number, contactY: number) => void): string[] {
 		const toDestroy: string[] = [];
 		this.state.balls.forEach((_ball, ballId) => {
-			if (this.updateBall(ballId, dt, broadcastShake) === "destroy") {
+			if (this.updateBall(ballId, dt, broadcastShake, broadcastBrickHit) === "destroy") {
 				toDestroy.push(ballId);
 			}
 		});
@@ -71,7 +71,7 @@ export class BallManager {
 		return found;
 	}
 
-	private updateBall(ballId: string, dt: number, broadcastShake: () => void): "ok" | "destroy" {
+	private updateBall(ballId: string, dt: number, broadcastShake: () => void, broadcastBrickHit: (hitSide: HitSide, contactX: number, contactY: number) => void): "ok" | "destroy" {
 		const ball = this.state.balls.get(ballId)!;
 		const ownerPaddle = this.state.paddles.get(ball.ownerSessionId);
 		const ownerTeam = ownerPaddle?.team ?? 0;
@@ -86,7 +86,9 @@ export class BallManager {
 		}
 
 		const callbacks: BallStepCallbacks = {
-			onBrickHit: (brickIndex: number) => {
+			onBrickHit: (brickIndex: number, hitSide: HitSide, contactX: number, contactY: number) => {
+				broadcastBrickHit(hitSide, contactX, contactY);
+
 				if (!ownerPaddle) return;
 				const brick = this.state.bricks[brickIndex];
 				if (!brick) return;

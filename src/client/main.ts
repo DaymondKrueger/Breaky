@@ -6,7 +6,10 @@ import { ClientBrick } from "./brick";
 import { ClientBall } from "./ball";
 import { ClientPaddle } from "./paddle";
 import { Leaderboard } from "./leaderboard";
+import { VfxManager } from "./vfxManager";
+import { SpriteSheetFrames } from "./spriteSheetAnimation";
 import type { GameState } from "../shared/schemas/GameState";
+import type { HitSide } from "../shared/physics/ballPhysics";
 import * as C from "../shared/constants";
 import { stepBall } from "../shared/physics/ballPhysics";
 
@@ -119,6 +122,28 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	gs.HUD.interactiveChildren = false;
 
 	await loadAssets();
+
+	// VFX
+	const vfx = new VfxManager();
+
+	const sparkWall4Sheet = new SpriteSheetFrames({
+		alias: "sparkWall4",
+		frameCount: 12,
+		fps: 48,
+		loop: false,
+	});
+
+	// Default scale for the brick-hit spark effect (tweak to taste)
+	const BRICK_HIT_VFX_SCALE = 0.12;
+
+	function hitSideTransform(side: HitSide): { rotation: number; flipY: boolean } {
+		switch (side) {
+			case "top": return { rotation: 0, flipY: false };
+			case "bottom": return { rotation: 0, flipY: true  };
+			case "left": return { rotation: -Math.PI / 2, flipY: false }; // 270 degrees
+			case "right": return { rotation: Math.PI / 2, flipY: false }; // 90 degrees
+		}
+	}
 
 	const localPaddleSchema = room.state.paddles.get(room.sessionId);
 	if (localPaddleSchema?.team === 1) {
@@ -407,6 +432,38 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	room.onMessage("shake", () => screenShake(app));
 	room.onMessage("pong", () => { hudPing.textContent = `Ping: ${Date.now() - pingStart}ms`; });
 
+	// VFX dedup: track recent client-side brick hits so we don't double-spawn
+	// when the server also broadcasts the same hit
+	const recentClientHits: { x: number; y: number; time: number }[] = [];
+	const DEDUP_RADIUS = 20; // pixels
+	const DEDUP_WINDOW = 300; // ms
+
+	room.onMessage("brickHit", (data: { s: string; x: number; y: number }) => {
+		const now = Date.now();
+
+		// Prune old entries
+		while (recentClientHits.length > 0 && now - recentClientHits[0].time > DEDUP_WINDOW) {
+			recentClientHits.shift();
+		}
+
+		// Check if the client already spawned VFX for this hit
+		const isDuplicate = recentClientHits.some(h =>
+			Math.abs(h.x - data.x) < DEDUP_RADIUS && Math.abs(h.y - data.y) < DEDUP_RADIUS
+		);
+
+		if (!isDuplicate) {
+			const t = hitSideTransform(data.s as HitSide);
+			vfx.spawn({
+				sheet: sparkWall4Sheet,
+				x: data.x,
+				y: data.y,
+				rotation: t.rotation,
+				flipY: t.flipY,
+				scale: BRICK_HIT_VFX_SCALE,
+			});
+		}
+	});
+
 	// Leaderboard state listeners
 	room.state.listen("blueHealth", () => gs.leaderboard?.updateFromState(room.state));
 	room.state.listen("redHealth", () => gs.leaderboard?.updateFromState(room.state));
@@ -571,7 +628,27 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 				paddle = room.state.paddles.get(local.ownerSessionId) ?? null;
 			}
 
-			stepBall(local, room.state.bricks, paddle, ownerTeam, dt, { onBrickHit: () => {} });
+			let hitVfxSpawned = false;
+			stepBall(local, room.state.bricks, paddle, ownerTeam, dt, {
+				onBrickHit: (_idx, hitSide, contactX, contactY) => {
+					// Spawn only one VFX per collision event (multi-brick hits share the same contact point)
+					if (hitVfxSpawned) return;
+					hitVfxSpawned = true;
+
+					// Record for dedup against server broadcast
+					recentClientHits.push({ x: contactX, y: contactY, time: Date.now() });
+
+					const t = hitSideTransform(hitSide);
+					vfx.spawn({
+						sheet: sparkWall4Sheet,
+						x: contactX,
+						y: contactY,
+						rotation: t.rotation,
+						flipY: t.flipY,
+						scale: BRICK_HIT_VFX_SCALE,
+					});
+				},
+			});
 
 			// Position correction toward server.
 			if (server) {
@@ -606,6 +683,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			gs.camera.pivot.x += (target - gs.camera.pivot.x) * CAMERA_LERP * dt;
 			gs.camera.pivot.x = Math.max(0, Math.min(gs.MAP_WIDTH - viewW, gs.camera.pivot.x));
 		}
+
+		// Advance all active VFX animations
+		vfx.update(dt);
 
 		cullOffScreen(gs.camera, app.renderer.width);
 

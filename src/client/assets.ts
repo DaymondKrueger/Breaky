@@ -37,6 +37,7 @@ const ASSET_MANIFEST = [
 
     // VFX spritesheets
 	{ alias: "napalmTrail", src: "res/vfx/fx_napalmTrail.png" },
+	{ alias: "sparkWall4", src: "res/vfx/fx_sparkWall4.png" },
 ];
 
 export async function loadAssets(): Promise<void> {

@@ -22,8 +22,10 @@ export interface PhysicsPaddle {
 	scaleX: number;
 }
 
+export type HitSide = "top" | "bottom" | "left" | "right";
+
 export interface BallStepCallbacks {
-	onBrickHit(brickIndex: number): void;
+	onBrickHit(brickIndex: number, hitSide: HitSide, contactX: number, contactY: number): void;
 }
 
 // Hard cap on ball speed to prevent runaway turbo stacking
@@ -38,7 +40,7 @@ function rectsOverlap(ax: number, ay: number, aw: number, ah: number, bx: number
 }
 
 // axis override: "y" = force vertical bounce, "x" = force horizontal, null = use heuristic
-function bounceAndDepenetrate(ball: BallState, brick: PhysicsBrick, axisOverride: "x" | "y" | null): void {
+function bounceAndDepenetrate(ball: BallState, brick: PhysicsBrick, axisOverride: "x" | "y" | null): HitSide {
 	let bounceY: boolean;
 
 	if (axisOverride === "y") {
@@ -55,19 +57,24 @@ function bounceAndDepenetrate(ball: BallState, brick: PhysicsBrick, axisOverride
 	}
 
 	if (bounceY) {
+		// Capture hit side BEFORE flipping velocity
+		const side: HitSide = ball.vY > 0 ? "top" : "bottom";
 		ball.vY *= -1;
 		if (ball.vY < 0) {
 			ball.y = brick.y - C.BALL_HEIGHT;
 		} else {
 			ball.y = brick.y + C.BRICK_HEIGHT;
 		}
+		return side;
 	} else {
+		const side: HitSide = ball.vX > 0 ? "left" : "right";
 		ball.vX *= -1;
 		if (ball.vX < 0) {
 			ball.x = brick.x - C.BALL_WIDTH;
 		} else {
 			ball.x = brick.x + C.BRICK_WIDTH;
 		}
+		return side;
 	}
 }
 
@@ -177,7 +184,32 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 
 		// Bounce off the first hit brick, with the axis override if detected
 		const firstBrick = bricks[hitIndices[0]]!;
-		bounceAndDepenetrate(ball, firstBrick, axisOverride);
+		const hitSide = bounceAndDepenetrate(ball, firstBrick, axisOverride);
+
+		// Compute the contact point on the brick surface
+		const ballCenterX = ball.x + C.BALL_WIDTH / 2;
+		const ballCenterY = ball.y + C.BALL_HEIGHT / 2;
+		let contactX: number;
+		let contactY: number;
+
+		switch (hitSide) {
+			case "top":
+				contactX = clamp(ballCenterX, firstBrick.x, firstBrick.x + C.BRICK_WIDTH);
+				contactY = firstBrick.y;
+				break;
+			case "bottom":
+				contactX = clamp(ballCenterX, firstBrick.x, firstBrick.x + C.BRICK_WIDTH);
+				contactY = firstBrick.y + C.BRICK_HEIGHT;
+				break;
+			case "left":
+				contactX = firstBrick.x;
+				contactY = clamp(ballCenterY, firstBrick.y, firstBrick.y + C.BRICK_HEIGHT);
+				break;
+			case "right":
+				contactX = firstBrick.x + C.BRICK_WIDTH;
+				contactY = clamp(ballCenterY, firstBrick.y, firstBrick.y + C.BRICK_HEIGHT);
+				break;
+		}
 
 		// Fire callbacks. Only for bricks on the collision face when an adjacent pair was found, so corner-clipped bricks are ignored.
 		for (const idx of hitIndices) {
@@ -188,7 +220,7 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 				// Only hit bricks in the same column as the adjacent pair
 				if (Math.abs(bricks[idx]!.x - faceValue) > 1) continue;
 			}
-			callbacks.onBrickHit(idx);
+			callbacks.onBrickHit(idx, hitSide, contactX, contactY);
 		}
 	}
 
