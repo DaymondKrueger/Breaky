@@ -126,8 +126,29 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	// VFX
 	const vfx = new VfxManager();
 
+	const sparkWall2Sheet = new SpriteSheetFrames({
+		alias: "sparkWall2",
+		frameCount: 9,
+		fps: 48,
+		loop: false,
+	});
+
+	const sparkWall3Sheet = new SpriteSheetFrames({
+		alias: "sparkWall3",
+		frameCount: 10,
+		fps: 48,
+		loop: false,
+	});
+
 	const sparkWall4Sheet = new SpriteSheetFrames({
 		alias: "sparkWall4",
+		frameCount: 12,
+		fps: 48,
+		loop: false,
+	});
+
+	const sparkWall8Sheet = new SpriteSheetFrames({
+		alias: "sparkWall8",
 		frameCount: 12,
 		fps: 48,
 		loop: false,
@@ -452,9 +473,17 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		);
 
 		if (!isDuplicate) {
+            const sheets = [
+                sparkWall2Sheet,
+                sparkWall3Sheet,
+                sparkWall4Sheet,
+                sparkWall8Sheet,
+            ];
+            const selectedSheet = sheets[Math.floor(Math.random() * sheets.length)];
+
 			const t = hitSideTransform(data.s as HitSide);
 			vfx.spawn({
-				sheet: sparkWall4Sheet,
+				sheet: selectedSheet,
 				x: data.x,
 				y: data.y,
 				rotation: t.rotation,
@@ -638,15 +667,23 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 					// Record for dedup against server broadcast
 					recentClientHits.push({ x: contactX, y: contactY, time: Date.now() });
 
-					const t = hitSideTransform(hitSide);
-					vfx.spawn({
-						sheet: sparkWall4Sheet,
-						x: contactX,
-						y: contactY,
-						rotation: t.rotation,
-						flipY: t.flipY,
-						scale: BRICK_HIT_VFX_SCALE,
-					});
+                    const sheets = [
+                        sparkWall2Sheet,
+                        sparkWall3Sheet,
+                        sparkWall4Sheet,
+                        sparkWall8Sheet,
+                    ];
+                    const selectedSheet = sheets[Math.floor(Math.random() * sheets.length)];
+
+                    const t = hitSideTransform(hitSide);
+                    vfx.spawn({
+                        sheet: selectedSheet,
+                        x: contactX,
+                        y: contactY,
+                        rotation: t.rotation,
+                        flipY: t.flipY,
+                        scale: BRICK_HIT_VFX_SCALE,
+                    });
 				},
 			});
 
