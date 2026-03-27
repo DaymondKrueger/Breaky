@@ -22,6 +22,7 @@ export class GameRoom extends Room<GameState> {
     private inputs = new Map<string, InputMessage>();
 	private releaseBall = new Map<string, boolean>();
     private paddleDir = new Map<string, number>(); // -1, 0, 1
+    private paddleVelocity = new Map<string, number>(); // current velocity from client
     private paddleTravel = new Map<string, { distance: number; lastX: number; windowStart: number }>();
 
 	private brickManager!: BrickManager;
@@ -41,7 +42,7 @@ export class GameRoom extends Room<GameState> {
 		this.paddleManager = new PaddleManager();
 		this.botManager = new BotManager(this.state, this.inputs);
 
-        this.onMessage<{ x: number; d: number; f: number }>("input", (client, data) => {
+        this.onMessage<{ x: number; d: number; v: number; f: number }>("input", (client, data) => {
             if (this.state.phase !== "playing") return;
 
             const paddle = this.state.paddles.get(client.sessionId);
@@ -73,9 +74,10 @@ export class GameRoom extends Room<GameState> {
                 }
             }
 
-            // Store direction for server-side extrapolation between messages
+            // Store direction and velocity for server-side extrapolation between messages
             const d = data.d;
             this.paddleDir.set(client.sessionId, d === -1 ? -1 : d === 1 ? 1 : 0);
+            this.paddleVelocity.set(client.sessionId, data.v ?? 0);
 
             this.releaseBall.set(client.sessionId, (data.f & 1) !== 0);
         });
@@ -144,6 +146,7 @@ export class GameRoom extends Room<GameState> {
 		this.state.paddles.set(client.sessionId, paddle);
 		this.inputs.set(client.sessionId, { left: false, right: false, releaseBall: false });
         this.paddleDir.set(client.sessionId, 0);
+        this.paddleVelocity.set(client.sessionId, 0);
         this.releaseBall.set(client.sessionId, false);
         this.paddleTravel.set(client.sessionId, { distance: 0, lastX: paddle.x, windowStart: this.clock.currentTime });
 
@@ -172,8 +175,10 @@ export class GameRoom extends Room<GameState> {
 		this.state.paddles.delete(client.sessionId);
 		this.inputs.delete(client.sessionId);
         this.paddleDir.delete(client.sessionId);
+        this.paddleVelocity.delete(client.sessionId);
         this.releaseBall.delete(client.sessionId);
         this.paddleTravel.delete(client.sessionId);
+        this.paddleManager.removeSession(client.sessionId);
 
 		if (this.state.phase === "lobby") {
 			// Cancel any countdown that was running - someone left.
@@ -306,17 +311,20 @@ export class GameRoom extends Room<GameState> {
 
 		this.state.paddles.forEach((paddle, sessionId) => {
             if (this.botManager.isBot(sessionId)) {
-                // Bots still use directional input
+                // Bots use velocity-based directional input via PaddleManager
                 const input = this.inputs.get(sessionId) ?? { left: false, right: false, releaseBall: false };
-                this.paddleManager.updatePaddle(paddle, input, dt);
+                this.paddleManager.updatePaddle(paddle, sessionId, input, dt);
             } else {
-                // Human paddles: extrapolate using stored direction
+                // Human paddles: extrapolate using the velocity reported by the client
+                const vel = this.paddleVelocity.get(sessionId) ?? 0;
                 const dir = this.paddleDir.get(sessionId) ?? 0;
-                if (dir !== 0) {
+                if (vel !== 0 || dir !== 0) {
+                    // Use client velocity for smooth extrapolation; fall back to direction * pSpeed when velocity hasn't arrived yet.
+                    const step = vel !== 0 ? vel : dir * paddle.pSpeed;
                     const paddleW = C.PADDLE_WIDTH * paddle.scaleX;
                     const minX = 34;
                     const maxX = C.MAP_WIDTH - paddleW - 34;
-                    paddle.x = Math.max(minX, Math.min(maxX, paddle.x + dir * paddle.pSpeed * dt));
+                    paddle.x = Math.max(minX, Math.min(maxX, paddle.x + step * dt));
                 }
             }
         });

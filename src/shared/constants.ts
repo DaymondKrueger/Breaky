@@ -26,3 +26,7 @@ export const WALL_LEFT = 30;
 // Ball scoring thresholds
 export const GOAL_TOP = -32;
 export const GOAL_BOTTOM = HEIGHT;
+
+// Paddle velocity-based movement tuning from 0-1
+export const PADDLE_ACCEL = 0.25;
+export const PADDLE_DECEL = 0.18;

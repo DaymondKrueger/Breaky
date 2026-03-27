@@ -276,6 +276,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 	// Local prediction state
 	let localPaddleX = 0;
+	let localPaddleVelocity = 0; // current paddle velocity (pixels per tick)
 	let localPSpeed = C.PADDLE_WIDTH; // updated when server sends pSpeed
 	let localScaleX = 1; // updated when server sends scaleX
 	let localInversion = false;
@@ -307,7 +308,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 		let f = 0;
 		if (input.releaseBall) f |= 1;
-		room.send("input", { x: localPaddleX, d, f });
+		room.send("input", { x: localPaddleX, d, v: localPaddleVelocity, f });
 	}
 
 	window.addEventListener("keydown", (e: KeyboardEvent) => setKey(e, true));
@@ -598,16 +599,31 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			const wantsRight = localInversion ? input.left : input.right;
 			const wantsLeft = localInversion ? input.right : input.left;
 
-			if (wantsRight) localPaddleX += localPSpeed * dt;
-			if (wantsLeft) localPaddleX -= localPSpeed * dt;
+			const dir = (wantsRight ? 1 : 0) - (wantsLeft ? 1 : 0);
+			if (dir !== 0) {
+				// Accelerate toward max speed in the pressed direction
+				localPaddleVelocity += (dir * localPSpeed - localPaddleVelocity) * C.PADDLE_ACCEL * dt;
+			} else {
+				// Decelerate to a stop
+				localPaddleVelocity *= Math.pow(1 - C.PADDLE_DECEL, dt);
+				if (Math.abs(localPaddleVelocity) < 0.01) localPaddleVelocity = 0;
+			}
 
+			localPaddleX += localPaddleVelocity * dt;
 			localPaddleX = Math.max(34, Math.min(maxX, localPaddleX));
+
+			// Kill velocity when pressing into a wall
+			if ((localPaddleVelocity > 0 && localPaddleX >= maxX) ||
+				(localPaddleVelocity < 0 && localPaddleX <= 34)) {
+				localPaddleVelocity = 0;
+			}
+
 			myPaddle.paddle.x = localPaddleX;
 			myPaddle.syncLabelX(localPaddleX);
 		}
 
-		// Position sync heartbeat while moving
-		if (myPaddle && room.state.phase === "playing" && (input.left || input.right)) {
+		// Position sync heartbeat while moving or decelerating
+		if (myPaddle && room.state.phase === "playing" && (input.left || input.right || localPaddleVelocity !== 0)) {
 			if (now - lastPositionSync >= POSITION_SYNC_MS) {
 				lastPositionSync = now;
 				sendInput();
