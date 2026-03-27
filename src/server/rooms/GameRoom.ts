@@ -290,7 +290,7 @@ export class GameRoom extends Room<GameState> {
 
 	private startGame(): void {
 		this.brickManager.spawnMap();
-		this.botManager.balanceTeams(this.ballManager);
+		// this.botManager.balanceTeams(this.ballManager);
 
 		this.state.paddles.forEach((paddle, sessionId) => {
 			if (!this.botManager.isBot(sessionId)) {

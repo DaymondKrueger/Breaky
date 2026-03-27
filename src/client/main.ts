@@ -268,9 +268,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const POSITION_SYNC_MS = 50;
 
 	// Ball prediction state
-	interface LocalBall { x: number; y: number; vX: number; vY: number; ownerSessionId: string; }
+	interface LocalBall { x: number; y: number; vX: number; vY: number; ownerSessionId: string; napalmQueued: boolean; napalmActive: boolean; }
 	const localBalls = new Map<string, LocalBall>();
-	const serverBalls = new Map<string, { x: number; y: number; vX: number; vY: number }>();
+	const serverBalls = new Map<string, { x: number; y: number; vX: number; vY: number; napalmActive: boolean; }>();
 	const ballOwnerTeam = new Map<string, number>();
 	const BALL_CORRECTION = 200; // fallback snap
 
@@ -425,9 +425,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		ballOwnerTeam.set(ballId, ownerTeam);
 
 		// Seed local prediction from server spawn state
-		const local: LocalBall = { x: ball.x, y: ball.y, vX: ball.vX, vY: ball.vY, ownerSessionId: ball.ownerSessionId };
+		const local: LocalBall = { x: ball.x, y: ball.y, vX: ball.vX, vY: ball.vY, ownerSessionId: ball.ownerSessionId, napalmQueued: ball.napalmQueued, napalmActive: ball.napalmActive };
 		localBalls.set(ballId, local);
-		serverBalls.set(ballId, { x: ball.x, y: ball.y, vX: ball.vX, vY: ball.vY });
+		serverBalls.set(ballId, { x: ball.x, y: ball.y, vX: ball.vX, vY: ball.vY, napalmActive: ball.napalmActive });
 
 		// Track server position for drift correction
 		ball.listen("x",  v => { const s = serverBalls.get(ballId); if (s) s.x  = v; });
@@ -440,6 +440,10 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			const s = serverBalls.get(ballId); if (s) s.vY = v;
 			const l = localBalls.get(ballId);  if (l) l.vY = v;
 		});
+        ball.listen("napalmActive", v => { 
+            const s = serverBalls.get(ballId); if (s) s.napalmActive = v;
+            const l = localBalls.get(ballId); if (l) l.napalmActive = v;
+        })
 	});
 
 	room.state.balls.onRemove((_b, ballId) => {

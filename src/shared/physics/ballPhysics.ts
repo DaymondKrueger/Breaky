@@ -6,6 +6,8 @@ export interface BallState {
 	y: number;
 	vX: number;
 	vY: number;
+    napalmQueued: boolean; // queues up napalm to activate next time ball hits paddle
+    napalmActive: boolean; // if napalm is active
 }
 
 export interface PhysicsBrick {
@@ -125,6 +127,12 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 
 		const PADDLE_MARGIN = 6;
 		if (rectsOverlap(ball.x, ball.y, C.BALL_WIDTH, C.BALL_HEIGHT, paddle.x - PADDLE_MARGIN, paddleY, paddleW + PADDLE_MARGIN * 2, C.PADDLE_HEIGHT)) {
+            // Activate napalm if queued
+            if (ball.napalmQueued) {
+                ball.napalmActive = true;
+                ball.napalmQueued = false;
+            }
+
 			// Only reverse if ball is heading toward the paddle face
 			if (paddle.team === 0 && ball.vY > 0) ball.vY *= -1;
 			if (paddle.team === 1 && ball.vY < 0) ball.vY *= -1;

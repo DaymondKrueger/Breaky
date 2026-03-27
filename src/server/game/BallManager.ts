@@ -75,7 +75,7 @@ export class BallManager {
 		const ball = this.state.balls.get(ballId)!;
 		const ownerPaddle = this.state.paddles.get(ball.ownerSessionId);
 		const ownerTeam = ownerPaddle?.team ?? 0;
-		const napalm = ball.napalm;
+		const napalm = ball.napalmActive;
 
         // Ball is stuck to the paddle
 		if (!this.ballReleased.get(ballId)) {
@@ -99,7 +99,7 @@ export class BallManager {
 						if (napalm) {
 							ownerPaddle.score += 5;
 							this.bricks.ownBrick(brick, ball.ownerSessionId);
-							ball.napalm = false;
+							ball.napalmActive = false;
 						} else if (brick.health > 1) {
 							brick.health--;
 						} else {
@@ -119,7 +119,7 @@ export class BallManager {
 					}
 					case BrickTypes.INDESTRUCT: break;
 					case BrickTypes.NAPALM: {
-						ball.napalm = true;
+						ball.napalmQueued = true;
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
 						break;
 					}

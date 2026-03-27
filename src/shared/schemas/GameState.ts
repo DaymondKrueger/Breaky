@@ -23,7 +23,8 @@ export class BallSchema extends Schema {
 	vX: number = 0;
 	vY: number = 0;
 	ownerSessionId: string = "";
-    napalm: boolean = false;
+    napalmQueued: boolean = false; // queues up napalm to activate next time ball hits paddle
+    napalmActive: boolean = false; // if napalm is active
 }
 defineTypes(BallSchema, {
 	x: "float32",
@@ -31,7 +32,8 @@ defineTypes(BallSchema, {
 	vX: "float32",
 	vY: "float32",
 	ownerSessionId: "string",
-    napalm: "boolean",
+    napalmQueued: "boolean",
+    napalmActive: "boolean",
 });
 
 export class PaddleSchema extends Schema {
