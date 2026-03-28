@@ -22,7 +22,7 @@ export class GameRoom extends Room<GameState> {
     private inputs = new Map<string, InputMessage>();
 	private releaseBall = new Map<string, boolean>();
     private paddleDir = new Map<string, number>(); // -1, 0, 1
-    private paddleVelocity = new Map<string, number>(); // current velocity from client
+    private paddleSimVel = new Map<string, number>(); // server-side simulated velocity for human paddles
     private paddleTravel = new Map<string, { distance: number; lastX: number; windowStart: number }>();
 
 	private brickManager!: BrickManager;
@@ -77,7 +77,7 @@ export class GameRoom extends Room<GameState> {
             // Store direction and velocity for server-side extrapolation between messages
             const d = data.d;
             this.paddleDir.set(client.sessionId, d === -1 ? -1 : d === 1 ? 1 : 0);
-            this.paddleVelocity.set(client.sessionId, data.v ?? 0);
+            this.paddleSimVel.set(client.sessionId, data.v ?? 0);
 
             this.releaseBall.set(client.sessionId, (data.f & 1) !== 0);
         });
@@ -146,7 +146,7 @@ export class GameRoom extends Room<GameState> {
 		this.state.paddles.set(client.sessionId, paddle);
 		this.inputs.set(client.sessionId, { left: false, right: false, releaseBall: false });
         this.paddleDir.set(client.sessionId, 0);
-        this.paddleVelocity.set(client.sessionId, 0);
+        this.paddleSimVel.set(client.sessionId, 0);
         this.releaseBall.set(client.sessionId, false);
         this.paddleTravel.set(client.sessionId, { distance: 0, lastX: paddle.x, windowStart: this.clock.currentTime });
 
@@ -175,7 +175,7 @@ export class GameRoom extends Room<GameState> {
 		this.state.paddles.delete(client.sessionId);
 		this.inputs.delete(client.sessionId);
         this.paddleDir.delete(client.sessionId);
-        this.paddleVelocity.delete(client.sessionId);
+        this.paddleSimVel.delete(client.sessionId);
         this.releaseBall.delete(client.sessionId);
         this.paddleTravel.delete(client.sessionId);
         this.paddleManager.removeSession(client.sessionId);
@@ -315,17 +315,28 @@ export class GameRoom extends Room<GameState> {
                 const input = this.inputs.get(sessionId) ?? { left: false, right: false, releaseBall: false };
                 this.paddleManager.updatePaddle(paddle, sessionId, input, dt);
             } else {
-                // Human paddles: extrapolate using the velocity reported by the client
-                const vel = this.paddleVelocity.get(sessionId) ?? 0;
+                // Human paddles: run the same accel/decel curve as the client
+                // (direction from client is already post-inversion)
                 const dir = this.paddleDir.get(sessionId) ?? 0;
-                if (vel !== 0 || dir !== 0) {
-                    // Use client velocity for smooth extrapolation; fall back to direction * pSpeed when velocity hasn't arrived yet.
-                    const step = vel !== 0 ? vel : dir * paddle.pSpeed;
-                    const paddleW = C.PADDLE_WIDTH * paddle.scaleX;
-                    const minX = 34;
-                    const maxX = C.MAP_WIDTH - paddleW - 34;
-                    paddle.x = Math.max(minX, Math.min(maxX, paddle.x + step * dt));
+                let vel = this.paddleSimVel.get(sessionId) ?? 0;
+
+                if (dir !== 0) {
+                    vel += (dir * paddle.pSpeed - vel) * C.PADDLE_ACCEL * dt;
+                } else {
+                    vel *= Math.pow(1 - C.PADDLE_DECEL, dt);
+                    if (Math.abs(vel) < 0.01) vel = 0;
                 }
+
+                const paddleW = C.PADDLE_WIDTH * paddle.scaleX;
+                const minX = 34;
+                const maxX = C.MAP_WIDTH - paddleW - 34;
+                paddle.x = Math.max(minX, Math.min(maxX, paddle.x + vel * dt));
+
+                if ((vel > 0 && paddle.x >= maxX) || (vel < 0 && paddle.x <= 34)) {
+                    vel = 0;
+                }
+
+                this.paddleSimVel.set(sessionId, vel);
             }
         });
 
