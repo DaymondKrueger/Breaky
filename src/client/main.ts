@@ -179,6 +179,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	initMapVisuals(gs.isFlipped);
 
 	gs.leaderboard = new Leaderboard();
+	gs.leaderboard.updateFromState(room.state);
 
 	// HTML elements
 	const mainMenu = document.getElementById("main-menu")!;
@@ -300,7 +301,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		right: false,
 		releaseBall: false,
 	};
-    
+
 	// Stores the vX the client predicted so the server can use the same value
 	let pendingReleaseVX: number | null = null;
 
