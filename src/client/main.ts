@@ -12,6 +12,7 @@ import type { GameState } from "../shared/schemas/GameState";
 import type { HitSide } from "../shared/physics/ballPhysics";
 import * as C from "../shared/constants";
 import { stepBall } from "../shared/physics/ballPhysics";
+import { AudioManager, loadSounds } from "./audioManager";
 
 export function screenShake(app: Application, intensity = 15, duration = 500): void {
 	const stage = app.stage;
@@ -91,7 +92,6 @@ function initMapVisuals(isFlipped: boolean): void {
 		const wallRight = new Sprite(Texture.from("wallSegment"));
 		wallRight.height = Math.round(HEIGHT / 7) + 1;
 		wallRight.position.set(MAP_WIDTH - 30, i * wallRight.height);
-        console.log(wallRight.height);
 		gs.camera.addChild(wallRight);
 	}
 	for (let i = 0; i < Math.round((MAP_WIDTH - 60) / 32); i++) {
@@ -124,6 +124,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	gs.HUD.interactiveChildren = false;
 
 	await loadAssets();
+    await loadSounds();
+
+    AudioManager.setPlayerPositionGetter(() => localPaddleX + (C.PADDLE_WIDTH * localScaleX) / 2);
 
 	// VFX
 	const vfx = new VfxManager();
@@ -772,6 +775,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 		// Advance all active VFX animations
 		vfx.update(dt);
+
+        AudioManager.update();
+        AudioManager.setPlayerPositionGetter(() => localPaddleX + (C.PADDLE_WIDTH * localScaleX) / 2);
 
 		cullOffScreen(gs.camera, app.renderer.width);
 

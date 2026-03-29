@@ -2,13 +2,15 @@ import * as Colyseus from "colyseus.js";
 import { GameState } from "../shared/schemas/GameState";
 import { initGame } from "./main";
 import { loadAssets } from "./assets";
+import { loadSounds } from "./audioManager";
 import "./styles/main.scss";
 
 const SERVER_URL = process.env.NODE_ENV === "development" ? `ws://${process.env.DEV_SERVER_URL}` : `wss://breakyserver.ultraboodog.com`;
 const client = new Colyseus.Client(SERVER_URL);
 
-// Start loading assets immediately so they're cached before any room join
+// Start loading assets/sounds immediately so they're cached before any room join
 const assetsReady = loadAssets();
+const soundsReady = loadSounds();
 
 const RECONNECT_KEY = "breaky_reconnect";
 
@@ -108,6 +110,7 @@ async function enterRoom(roomPromise: Promise<Colyseus.Room<GameState>>): Promis
     let room: Colyseus.Room<GameState> | undefined;
     try {
         await assetsReady; // ensure textures are cached before entering the game
+        await soundsReady; // ensure sounds are cached before entering the game
         room = await roomPromise;
         console.log("Joined room:", room.id);
         await initGame(room);
@@ -170,6 +173,7 @@ async function attemptReconnect(): Promise<boolean> {
 	sessionStorage.removeItem(RECONNECT_KEY);
 	try {
 		await assetsReady; // ensure textures are cached before entering the game
+        await soundsReady; // ensure sounds are cached before entering the game
 		const room = await client.reconnect<GameState>(token);
 		console.log("Reconnected to room:", room.id);
 		const mainMenu = document.getElementById("main-menu")!;
