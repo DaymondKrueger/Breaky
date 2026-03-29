@@ -217,7 +217,8 @@ let registered = false;
 
 export async function loadSounds(): Promise<void> {
 	if (!registered) {
-        // await AudioManager.load("song", "song.mp3");
+        await AudioManager.load("hitBrick", "hitBrick.wav");
+        await AudioManager.load("tempSong", "tempSong.mp3");
 		registered = true;
     }
 }

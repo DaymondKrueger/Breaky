@@ -490,8 +490,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	room.onMessage("shake", () => screenShake(app));
 	room.onMessage("pong", () => { hudPing.textContent = `Ping: ${Date.now() - pingStart}ms`; });
 
-	// VFX dedup: track recent client-side brick hits so we don't double-spawn
-	// when the server also broadcasts the same hit
+	// VFX dedup: track recent client-side brick hits so we don't double-spawn when the server also broadcasts the same hit
 	const recentClientHits: { x: number; y: number; time: number }[] = [];
 	const DEDUP_RADIUS = 20; // pixels
 	const DEDUP_WINDOW = 300; // ms
@@ -503,6 +502,10 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		while (recentClientHits.length > 0 && now - recentClientHits[0].time > DEDUP_WINDOW) {
 			recentClientHits.shift();
 		}
+
+        // TODO: Change sound on brick type. And, if it wasn't the local players hit, max volume at 0.5
+        // Play sound
+        AudioManager.playAtX("hitBrick", data.x, { maxDistance: 1000 });
 
 		// Check if the client already spawned VFX for this hit
 		const isDuplicate = recentClientHits.some(h =>
@@ -563,6 +566,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		} else if (phase === "playing") {
 			mainMenu.style.opacity = "0";
 			setTimeout(() => (mainMenu.style.display = "none"), 400);
+            AudioManager.play("tempSong", { loop: true, volume: 0.5 });
 		} else if (phase === "gameover") {
 			const blue = room.state.blueHealth;
 			const red = room.state.redHealth;
