@@ -219,6 +219,12 @@ export async function loadSounds(): Promise<void> {
 	if (!registered) {
         await AudioManager.load("hitBrick", "hitBrick.wav");
         await AudioManager.load("tempSong", "tempSong.mp3");
+        await AudioManager.load("hitMystery", "hitMystery.wav");
+        await AudioManager.load("explosion", "explosion.wav");
+        await AudioManager.load("hitIndestruct", "hitIndestruct.wav");
+        await AudioManager.load("powerUp", "powerUp.wav");
+        await AudioManager.load("debuff", "debuff.wav");
+        await AudioManager.load("hitOwned", "hitOwned.wav");
 		registered = true;
     }
 }

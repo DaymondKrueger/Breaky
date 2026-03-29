@@ -25,7 +25,7 @@ export interface PhysicsPaddle {
 export type HitSide = "top" | "bottom" | "left" | "right";
 
 export interface BallStepCallbacks {
-	onBrickHit(brickIndex: number, hitSide: HitSide, contactX: number, contactY: number): void;
+	onBrickHit(brickIndex: number, hitSide: HitSide, contactX: number, contactY: number, brickType: number): void;
 }
 
 const MAX_SPEED = 25;
@@ -269,7 +269,7 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 				// Only hit bricks in the same column as the adjacent pair
 				if (Math.abs(bricks[idx]!.x - faceValue) > 1) continue;
 			}
-			callbacks.onBrickHit(idx, hitSide, contactX, contactY);
+			callbacks.onBrickHit(idx, hitSide, contactX, contactY, (bricks[idx]) ? bricks[idx].brickType : -1);
 		}
 	}
 

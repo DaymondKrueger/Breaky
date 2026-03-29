@@ -495,7 +495,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const DEDUP_RADIUS = 20; // pixels
 	const DEDUP_WINDOW = 300; // ms
 
-	room.onMessage("brickHit", (data: { s: string; x: number; y: number }) => {
+	room.onMessage("brickHit", (data: { s: string; x: number; y: number, brickType: number }) => {
 		const now = Date.now();
 
 		// Prune old entries
@@ -503,9 +503,15 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			recentClientHits.shift();
 		}
 
-        // TODO: Change sound on brick type. And, if it wasn't the local players hit, max volume at 0.5
-        // Play sound
-        AudioManager.playAtX("hitBrick", data.x, { maxDistance: 1000 });
+        // TODO: if it wasn't the local players hit, max volume at 0.5 (apart from TNT brick)
+        // Play sounds
+        if (data.brickType == 0 || data.brickType == 1) AudioManager.playAtX("hitBrick", data.x, { maxDistance: 1000 });
+        if (data.brickType == 2) AudioManager.playAtX("hitMystery", data.x, { maxDistance: 1000 });
+        if (data.brickType == 3) AudioManager.playAtX("explosion", data.x, { maxDistance: 5000 });
+        if (data.brickType == 4) AudioManager.playAtX("hitIndestruct", data.x, { maxDistance: 1000 });
+        if (data.brickType == 5 || data.brickType == 6 || data.brickType == 7) AudioManager.playAtX("powerUp", data.x, { maxDistance: 1000 });
+        if (data.brickType == 8 || data.brickType == 9 || data.brickType == 10) AudioManager.playAtX("debuff", data.x, { maxDistance: 1000 });
+        if (data.brickType == 11 || data.brickType == 12) AudioManager.playAtX("hitOwned", data.x, { maxDistance: 1000 });
 
 		// Check if the client already spawned VFX for this hit
 		const isDuplicate = recentClientHits.some(h =>
