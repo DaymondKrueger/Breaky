@@ -120,8 +120,12 @@ export class GameRoom extends Room<GameState> {
 	}
 
 	onJoin(client: Client, options: JoinOptions) {
-		if (this.state.phase !== "lobby") {
-			throw new Error("Game already in progress. Please join a new room.");
+		// Only block joins during countdown and gameover
+		if (this.state.phase === "countdown") {
+			throw new Error("Game is starting. Please wait for the next round.");
+		}
+		if (this.state.phase === "gameover") {
+			throw new Error("Game is over. Please join a different room.");
 		}
 
         if (options.playerId == undefined) throw new Error("Missing player ID. Please refresh and try again.");
@@ -160,7 +164,14 @@ export class GameRoom extends Room<GameState> {
 			console.log(`[GameRoom] ${paddle.username} is now the host.`);
 		}
 
-		console.log(`[GameRoom] ${paddle.username} joined (team ${team}). Player ID of ${options.playerId}`);
+        // If joining mid-game spawn a ball
+		if (this.state.phase === "playing") {
+			paddle.isReady = true;
+			this.ballManager.spawnBall(client.sessionId, paddle);
+			console.log(`[GameRoom] ${paddle.username} joined mid-game (team ${team}).`);
+		} else {
+			console.log(`[GameRoom] ${paddle.username} joined lobby (team ${team}). Player ID of ${options.playerId}`);
+		}
 	}
 
 	async onLeave(client: Client, consented: boolean) {
@@ -332,6 +343,7 @@ export class GameRoom extends Room<GameState> {
 		});
 
 		this.state.phase = "playing";
+        this.unlock();
 		this.clockTicker = this.clock.setInterval(() => this.tickPerSecond(), 1000);
 	}
 
