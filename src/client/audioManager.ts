@@ -213,8 +213,13 @@ class _AudioManager {
     }
 }
 
+let registered = false;
+
 export async function loadSounds(): Promise<void> {
-    // await AudioManager.load("song", "song.mp3");
+	if (!registered) {
+        // await AudioManager.load("song", "song.mp3");
+		registered = true;
+    }
 }
 
 export const AudioManager = new _AudioManager();

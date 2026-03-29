@@ -44,7 +44,12 @@ const ASSET_MANIFEST = [
 	{ alias: "sparkWall8", src: "res/vfx/fx_sparkWall8.png" },
 ];
 
+let registered = false;
+ 
 export async function loadAssets(): Promise<void> {
-	Assets.add(ASSET_MANIFEST);
+	if (!registered) {
+		Assets.add(ASSET_MANIFEST);
+		registered = true;
+	}
 	await Assets.load(ASSET_MANIFEST.map((a) => a.alias));
 }
