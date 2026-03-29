@@ -81,6 +81,7 @@ export class GameState extends Schema {
 	countdownSeconds: number = 5;
 	rematchCount: number = 0;
 	gameOverReason: string = "";
+	hostPlayerId: string = "";
 }
 defineTypes(GameState, {
 	paddles: { map: PaddleSchema },
@@ -95,4 +96,5 @@ defineTypes(GameState, {
 	countdownSeconds: "uint8",
     rematchCount: "uint8",
 	gameOverReason: "string",
+	hostPlayerId: "string",
 });

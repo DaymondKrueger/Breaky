@@ -370,7 +370,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			if (sid.startsWith("bot_")) return;
 			const li = document.createElement("li");
 			const teamLabel = p.team === 0 ? "\uD83D\uDD35" : "\uD83D\uDD34";
-			li.textContent = `${teamLabel} ${p.username} ${p.isReady ? "\u2713" : "..."}`;
+			const hostLabel = p.playerId === room.state.hostPlayerId ? " \uD83D\uDC51" : "";
+			li.textContent = `${teamLabel} ${p.username}${hostLabel} ${p.isReady ? "\u2713" : "..."}`;
 			if (sid === room.sessionId) li.style.fontWeight = "bold";
 			lobbyPlayerList.appendChild(li);
 		});
@@ -414,6 +415,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		paddleTargetX.delete(sessionId);
 		updateLobbyList();
 	});
+
+	// Refresh lobby list when host changes
+	room.state.listen("hostPlayerId", () => updateLobbyList());
 
 	// Schema listeners: balls
 	room.state.balls.onAdd((ball, ballId) => {

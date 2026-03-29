@@ -10,7 +10,7 @@ const MIN_PLAYERS = 1;
 const COUNTDOWN_SECONDS = 5;
 const RECONNECT_TIMEOUT = 15;
 
-interface JoinOptions { name?: string; playerId?: string; }
+interface JoinOptions { name?: string; playerId?: string; isCreator?: boolean; }
 interface InputMessage { left: boolean; right: boolean; releaseBall: boolean; }
 
 export class GameRoom extends Room<GameState> {
@@ -32,6 +32,9 @@ export class GameRoom extends Room<GameState> {
 
 	private countdownTimer: any = null;
 	private rematchVotes = new Set<string>();
+
+	// Maps sessionId to playerId for host tracking
+	private sessionToPlayerId = new Map<string, string>();
 
 	onCreate(_options: any) {
 		this.setState(new GameState());
@@ -149,6 +152,13 @@ export class GameRoom extends Room<GameState> {
         this.paddleSimVel.set(client.sessionId, 0);
         this.releaseBall.set(client.sessionId, false);
         this.paddleTravel.set(client.sessionId, { distance: 0, lastX: paddle.x, windowStart: this.clock.currentTime });
+        this.sessionToPlayerId.set(client.sessionId, options.playerId!);
+ 
+		// Assign host if this is the first player, or if they explicitly created the room
+		if (this.state.hostPlayerId === "" || options.isCreator) {
+			this.state.hostPlayerId = options.playerId!;
+			console.log(`[GameRoom] ${paddle.username} is now the host.`);
+		}
 
 		console.log(`[GameRoom] ${paddle.username} joined (team ${team}). Player ID of ${options.playerId}`);
 	}
@@ -156,6 +166,7 @@ export class GameRoom extends Room<GameState> {
 	async onLeave(client: Client, consented: boolean) {
 		const leavingPaddle = this.state.paddles.get(client.sessionId);
 		const leavingTeam = leavingPaddle?.team ?? 0;
+		const leavingPlayerId = this.sessionToPlayerId.get(client.sessionId);
 
         // If the disconnect was unintentional during a game, hold their slot so they can reconnect within RECONNECT_TIMEOUT seconds.
 		if (this.state.phase === "playing" && !consented) {
@@ -179,6 +190,12 @@ export class GameRoom extends Room<GameState> {
         this.releaseBall.delete(client.sessionId);
         this.paddleTravel.delete(client.sessionId);
         this.paddleManager.removeSession(client.sessionId);
+		this.sessionToPlayerId.delete(client.sessionId);
+ 
+		// Transfer host if the host left
+		if (leavingPlayerId && leavingPlayerId === this.state.hostPlayerId) {
+			this.transferHost();
+		}
 
 		if (this.state.phase === "lobby") {
 			// Cancel any countdown that was running - someone left.
@@ -197,6 +214,22 @@ export class GameRoom extends Room<GameState> {
 
 	onDispose() {
 		console.log(`[GameRoom] Room ${this.roomId} disposed.`);
+	}
+ 
+	// Transfer host to the next real (non-bot) player in the room
+	private transferHost(): void {
+		let newHostPlayerId = "";
+		this.state.paddles.forEach((p, sid) => {
+			if (newHostPlayerId !== "") return;
+			if (this.botManager.isBot(sid)) return;
+			newHostPlayerId = p.playerId;
+		});
+		this.state.hostPlayerId = newHostPlayerId;
+		if (newHostPlayerId) {
+			console.log(`[GameRoom] Host transferred to playerId ${newHostPlayerId}.`);
+		} else {
+			console.log(`[GameRoom] No players left to be host.`);
+		}
 	}
 
 	// Lobby
