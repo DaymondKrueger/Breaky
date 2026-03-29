@@ -45,6 +45,9 @@ export class GameRoom extends Room<GameState> {
 		this.paddleManager = new PaddleManager();
 		this.botManager = new BotManager(this.state, this.inputs);
 
+		// Set initial metadata for room browser
+		this.updateMetadata();
+
         this.onMessage<{ x: number; d: number; v: number; f: number }>("input", (client, data) => {
             if (this.state.phase !== "playing") return;
 
@@ -157,14 +160,14 @@ export class GameRoom extends Room<GameState> {
         this.releaseBall.set(client.sessionId, false);
         this.paddleTravel.set(client.sessionId, { distance: 0, lastX: paddle.x, windowStart: this.clock.currentTime });
         this.sessionToPlayerId.set(client.sessionId, options.playerId!);
- 
+
 		// Assign host if this is the first player, or if they explicitly created the room
 		if (this.state.hostPlayerId === "" || options.isCreator) {
 			this.state.hostPlayerId = options.playerId!;
 			console.log(`[GameRoom] ${paddle.username} is now the host.`);
 		}
 
-        // If joining mid-game spawn a ball
+		// If joining mid-game spawn a ball
 		if (this.state.phase === "playing") {
 			paddle.isReady = true;
 			this.ballManager.spawnBall(client.sessionId, paddle);
@@ -172,6 +175,8 @@ export class GameRoom extends Room<GameState> {
 		} else {
 			console.log(`[GameRoom] ${paddle.username} joined lobby (team ${team}). Player ID of ${options.playerId}`);
 		}
+
+		this.updateMetadata();
 	}
 
 	async onLeave(client: Client, consented: boolean) {
@@ -202,7 +207,7 @@ export class GameRoom extends Room<GameState> {
         this.paddleTravel.delete(client.sessionId);
         this.paddleManager.removeSession(client.sessionId);
 		this.sessionToPlayerId.delete(client.sessionId);
- 
+
 		// Transfer host if the host left
 		if (leavingPlayerId && leavingPlayerId === this.state.hostPlayerId) {
 			this.transferHost();
@@ -220,13 +225,14 @@ export class GameRoom extends Room<GameState> {
 			this.state.rematchCount = this.rematchVotes.size;
 		}
 
+		this.updateMetadata();
 		console.log(`[GameRoom] ${client.sessionId} left.`);
 	}
 
 	onDispose() {
 		console.log(`[GameRoom] Room ${this.roomId} disposed.`);
 	}
- 
+
 	// Transfer host to the next real (non-bot) player in the room
 	private transferHost(): void {
 		let newHostPlayerId = "";
@@ -241,6 +247,26 @@ export class GameRoom extends Room<GameState> {
 		} else {
 			console.log(`[GameRoom] No players left to be host.`);
 		}
+	}
+
+	// Update room metadata for the room browser
+	private updateMetadata(): void {
+		let playerCount = 0;
+		let hostName = "";
+		this.state.paddles.forEach((p, sid) => {
+			if (!this.botManager.isBot(sid)) {
+				playerCount++;
+				if (p.playerId === this.state.hostPlayerId) {
+					hostName = p.username;
+				}
+			}
+		});
+		this.setMetadata({
+			phase: this.state.phase,
+			playerCount,
+			maxPlayers: this.maxClients,
+			hostName,
+		});
 	}
 
 	// Lobby
@@ -261,6 +287,7 @@ export class GameRoom extends Room<GameState> {
 		this.state.phase = "countdown";
 		this.state.countdownSeconds = COUNTDOWN_SECONDS;
 		this.lock();
+		this.updateMetadata();
 
 		this.countdownTimer = this.clock.setInterval(() => {
 			this.state.countdownSeconds--;
@@ -279,6 +306,7 @@ export class GameRoom extends Room<GameState> {
 		this.state.countdownSeconds = COUNTDOWN_SECONDS;
 		this.state.paddles.forEach((p) => { p.isReady = false; });
 		this.unlock();
+		this.updateMetadata();
 	}
  
 	private checkAllRematch(): void {
@@ -329,6 +357,7 @@ export class GameRoom extends Room<GameState> {
 		this.state.phase = "lobby";
 		this.state.gameOverReason = "";
 		this.unlock();
+		this.updateMetadata();
 		console.log(`[GameRoom] Rematch! Room ${this.roomId} reset to lobby.`);
 	}
 
@@ -343,7 +372,9 @@ export class GameRoom extends Room<GameState> {
 		});
 
 		this.state.phase = "playing";
-        this.unlock();
+		// Unlock so new players can join mid-game
+		this.unlock();
+		this.updateMetadata();
 		this.clockTicker = this.clock.setInterval(() => this.tickPerSecond(), 1000);
 	}
 
@@ -457,6 +488,7 @@ export class GameRoom extends Room<GameState> {
 		} else if (this.state.seconds <= 0 && this.state.minutes === 0) {
 			this.state.gameOverReason = "time";
 			this.state.phase = "gameover";
+			this.updateMetadata();
 			console.log(`[GameRoom] Game over in room ${this.roomId}.`);
 		} else {
 			this.state.seconds--;
