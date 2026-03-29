@@ -58,6 +58,9 @@ module.exports = (env, argv) => {
 		new HtmlWebpackPlugin({
 			template: "./src/client/index.html",
 			filename: "index.html",
+            minify: {
+                removeRedundantAttributes: false,
+            },
 		}),
 		new CopyPlugin({
 			patterns: [
