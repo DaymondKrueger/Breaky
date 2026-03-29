@@ -82,15 +82,17 @@ function initMapVisuals(isFlipped: boolean): void {
 		gs.camera.addChild(bg);
 	}
 	for (let i = 0; i < 7; i++) {
-		const wl = new Sprite(Texture.from("wallSegment"));
-		wl.scale.x = -1; wl.anchor.set(1, 0);
-		wl.height = Math.round(HEIGHT / 7);
-		wl.position.set(0, i * wl.height);
-		gs.camera.addChild(wl);
-		const wr = new Sprite(Texture.from("wallSegment"));
-		wr.height = Math.round(HEIGHT / 7);
-		wr.position.set(MAP_WIDTH - 30, i * wr.height);
-		gs.camera.addChild(wr);
+		const wallLeft = new Sprite(Texture.from("wallSegment"));
+		wallLeft.scale.x = -1; 
+        wallLeft.anchor.set(1, 0);
+		wallLeft.height = Math.round(HEIGHT / 7) + 1;
+		wallLeft.position.set(0, i * wallLeft.height);
+		gs.camera.addChild(wallLeft);
+		const wallRight = new Sprite(Texture.from("wallSegment"));
+		wallRight.height = Math.round(HEIGHT / 7) + 1;
+		wallRight.position.set(MAP_WIDTH - 30, i * wallRight.height);
+        console.log(wallRight.height);
+		gs.camera.addChild(wallRight);
 	}
 	for (let i = 0; i < Math.round((MAP_WIDTH - 60) / 32); i++) {
 		const hl = new Sprite(Texture.from("halfLineMid"));
