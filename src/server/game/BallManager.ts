@@ -51,14 +51,16 @@ export class BallManager {
 		return toDestroy;
 	}
 
-	releaseBall(sessionId: string): void {
+	releaseBall(sessionId: string, clientVX?: number): void {
 		this.state.balls.forEach((ball, ballId) => {
 			if (ball.ownerSessionId !== sessionId) return;
 			if (this.ballReleased.get(ballId)) return;
 			const paddle = this.state.paddles.get(sessionId);
 			if (!paddle) return;
 			ball.vY = paddle.team === 0 ? -5 : 5;
-            ball.vX = Math.random() * 5 - 2.5; // -2.5 to 2.5
+			// Use client-suggested vX if provided and within valid range, otherwise random
+			const vx = (clientVX !== undefined && clientVX >= -2.5 && clientVX <= 2.5) ? clientVX : Math.random() * 5 - 2.5;
+            ball.vX = vx;
 			this.ballReleased.set(ballId, true);
 		});
 	}

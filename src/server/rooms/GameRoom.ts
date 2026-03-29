@@ -24,6 +24,8 @@ export class GameRoom extends Room<GameState> {
     private paddleDir = new Map<string, number>(); // -1, 0, 1
     private paddleSimVel = new Map<string, number>(); // server-side simulated velocity for human paddles
     private paddleTravel = new Map<string, { distance: number; lastX: number; windowStart: number }>();
+    private releaseVX = new Map<string, number>(); // client-suggested vX for ball release
+    private releaseVXHistory = new Map<string, number[]>(); // last N rvX values for cheat detection
 
 	private brickManager!: BrickManager;
 	private ballManager!: BallManager;
@@ -48,7 +50,7 @@ export class GameRoom extends Room<GameState> {
 		// Set initial metadata for room browser
 		this.updateMetadata();
 
-        this.onMessage<{ x: number; d: number; v: number; f: number }>("input", (client, data) => {
+        this.onMessage<{ x: number; d: number; v: number; f: number; rvX?: number }>("input", (client, data) => {
             if (this.state.phase !== "playing") return;
 
             const paddle = this.state.paddles.get(client.sessionId);
@@ -86,6 +88,21 @@ export class GameRoom extends Room<GameState> {
             this.paddleSimVel.set(client.sessionId, data.v ?? 0);
 
             this.releaseBall.set(client.sessionId, (data.f & 1) !== 0);
+            if ((data.f & 1) !== 0 && data.rvX !== undefined) {
+                this.releaseVX.set(client.sessionId, data.rvX);
+
+                // Track recent rvX values for cheat detection
+                let history = this.releaseVXHistory.get(client.sessionId);
+                if (!history) {
+                    history = [];
+                    this.releaseVXHistory.set(client.sessionId, history);
+                }
+                history.push(data.rvX);
+                if (history.length > 3) history.shift();
+                if (history.length === 3 && history[0] === history[1] && history[1] === history[2]) {
+                    console.warn(`[GameRoom] Ball release cheating detected for ${client.sessionId}`);
+                }
+            }
         });
 
 		this.onMessage("ready", (client) => {
@@ -204,6 +221,8 @@ export class GameRoom extends Room<GameState> {
         this.paddleDir.delete(client.sessionId);
         this.paddleSimVel.delete(client.sessionId);
         this.releaseBall.delete(client.sessionId);
+        this.releaseVX.delete(client.sessionId);
+        this.releaseVXHistory.delete(client.sessionId);
         this.paddleTravel.delete(client.sessionId);
         this.paddleManager.removeSession(client.sessionId);
 		this.sessionToPlayerId.delete(client.sessionId);
@@ -422,7 +441,8 @@ export class GameRoom extends Room<GameState> {
                 ? this.inputs.get(sessionId)?.releaseBall
                 : this.releaseBall.get(sessionId);
             if (wantsRelease && this.ballManager.hasUnreleasedBall(sessionId)) {
-                this.ballManager.releaseBall(sessionId);
+                this.ballManager.releaseBall(sessionId, this.releaseVX.get(sessionId));
+                this.releaseVX.delete(sessionId);
             }
         });
 

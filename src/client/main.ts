@@ -300,6 +300,21 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		right: false,
 		releaseBall: false,
 	};
+    
+	// Stores the vX the client predicted so the server can use the same value
+	let pendingReleaseVX: number | null = null;
+
+	function predictBallRelease(): void {
+		const myTeam = room.state.paddles.get(room.sessionId)?.team ?? 0;
+		localBalls.forEach((local, _ballId) => {
+			if (local.ownerSessionId !== room.sessionId) return;
+			if (local.vX !== 0 || local.vY !== 0) return; // already released
+			const rvX = Math.random() * 5 - 2.5;
+			local.vY = myTeam === 0 ? -5 : 5;
+			local.vX = rvX;
+			pendingReleaseVX = rvX;
+		});
+	}
 
 	function sendInput(): void {
 		const wantsRight = localInversion ? input.left  : input.right;
@@ -310,7 +325,12 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 		let f = 0;
 		if (input.releaseBall) f |= 1;
-		room.send("input", { x: localPaddleX, d, v: localPaddleVelocity, f });
+		const msg: any = { x: localPaddleX, d, v: localPaddleVelocity, f };
+		if (pendingReleaseVX !== null) {
+			msg.rvX = pendingReleaseVX;
+			pendingReleaseVX = null;
+		}
+		room.send("input", msg);
 	}
 
 	window.addEventListener("keydown", (e: KeyboardEvent) => setKey(e, true));
@@ -321,6 +341,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		if (!action) return;
 
 		input[action] = pressed;
+		if (action === "releaseBall" && pressed) predictBallRelease();
 		sendInput();
 	}
 
@@ -331,6 +352,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
 		if (hasUnreleased) {
 			input.releaseBall = true;
+			predictBallRelease();
 			sendInput();
 			return;
 		}
