@@ -139,7 +139,7 @@ export class BallManager {
 					case BrickTypes.SLOWMO: {
 						// Only apply speed penalty on first activation
 						if (ownerPaddle.slowmoTimer <= 0) {
-							ownerPaddle.pSpeed *= 0.75;
+							ownerPaddle.pSpeed *= 0.7;
 						}
 						ownerPaddle.slowmoTimer += 10;
 						this.bricks.ownBrick(brick, ball.ownerSessionId);
