@@ -590,6 +590,7 @@ html, body {
                         height: 6px;
                         margin-top: 2px;
                         border-radius: 12px;
+                        transition: width 0.2s ease;
 
                         &.blue {
                             background-color: $blue-tint;
