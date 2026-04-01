@@ -159,8 +159,15 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		loop: false,
 	});
 
-	// Default scale for the brick-hit spark effect (tweak to taste)
+	const explosionSheet = new SpriteSheetFrames({
+		alias: "explosion",
+		frameCount: 14,
+		fps: 40,
+		loop: false,
+	});
+
 	const BRICK_HIT_VFX_SCALE = 0.12;
+	const EXPLOSION_VFX_SCALE = 0.18;
 
 	function hitSideTransform(side: HitSide): { rotation: number; flipY: boolean } {
 		switch (side) {
@@ -507,7 +514,17 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         // Play sounds
         if (data.brickType == 0 || data.brickType == 1) AudioManager.playAtX("hitBrick", data.x, { maxDistance: 1000 });
         if (data.brickType == 2) AudioManager.playAtX("hitMystery", data.x, { maxDistance: 1000 });
-        if (data.brickType == 3) AudioManager.playAtX("explosion", data.x, { maxDistance: 5000 });
+        if (data.brickType == 3) 
+        {
+            AudioManager.playAtX("explosion", data.x, { maxDistance: 5000 });
+            // TODO: Spawn for each tnt individually (in case of chains), as well as use the center of the brick X/Y for the origin. Will need to do somewhere other than here
+			vfx.spawn({
+				sheet: explosionSheet,
+				x: data.x,
+				y: data.y + 64,
+				scale: EXPLOSION_VFX_SCALE,
+			});
+        }
         if (data.brickType == 4) AudioManager.playAtX("hitIndestruct", data.x, { maxDistance: 1000 });
         if (data.brickType == 5 || data.brickType == 6 || data.brickType == 7) AudioManager.playAtX("powerUp", data.x, { maxDistance: 1000 });
         if (data.brickType == 8 || data.brickType == 9 || data.brickType == 10) AudioManager.playAtX("debuff", data.x, { maxDistance: 1000 });

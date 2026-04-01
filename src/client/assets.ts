@@ -42,6 +42,7 @@ const ASSET_MANIFEST = [
 	{ alias: "sparkWall4", src: "res/vfx/fx_sparkWall4.png" },
 	{ alias: "sparkWall7", src: "res/vfx/fx_sparkWall7.png" },
 	{ alias: "sparkWall8", src: "res/vfx/fx_sparkWall8.png" },
+	{ alias: "explosion", src: "res/vfx/fx_tnt.png" },
 ];
 
 let registered = false;
