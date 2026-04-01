@@ -31,14 +31,23 @@ function getPlayerId(): string {
 
 // Connection status
 const connectionStatus = document.getElementById("connection-status")!;
+const playGameContainer = document.getElementById("play-game-container");
+const createRoomContainer = document.getElementById("create-room-container");
+const joinRoomContainer = document.getElementById("join-room-container");
 
 async function preConnect(): Promise<boolean> {
     connectionStatus.textContent = "Connecting...";
     connectionStatus.className = "connecting";
+    playGameContainer?.classList.toggle("disabled");
+    createRoomContainer?.classList.toggle("disabled");
+    joinRoomContainer?.classList.toggle("disabled");
     try {
         await client.getAvailableRooms("game_room");
         connectionStatus.textContent = "Connected";
         connectionStatus.className = "connected";
+        playGameContainer?.classList.toggle("disabled");
+        createRoomContainer?.classList.toggle("disabled");
+        joinRoomContainer?.classList.toggle("disabled");
         return true;
     } catch {
         connectionStatus.textContent = "Offline";
