@@ -293,6 +293,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	let localPSpeed = C.PADDLE_WIDTH; // updated when server sends pSpeed
 	let localScaleX = 1; // updated when server sends scaleX
 	let localInversion = false;
+    let localPlayerId = "";
 
 	type InputAction = "left" | "right" | "releaseBall";
 
@@ -421,6 +422,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			localPSpeed = paddle.pSpeed;
 			localScaleX = paddle.scaleX;
 			localInversion = paddle.inversionEffect;
+            localPlayerId = paddle.playerId;
 
 			// Sync powerup state changes to local prediction vars
 			paddle.listen("pSpeed", v => { localPSpeed = v; });
@@ -497,8 +499,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	room.onMessage("shake", () => screenShake(app));
 	room.onMessage("pong", () => { hudPing.textContent = `Ping: ${Date.now() - pingStart}ms`; });
 
-	// VFX dedup: track recent client-side brick hits so we don't double-spawn when the server also broadcasts the same hit
-	const recentClientHits: { x: number; y: number; time: number }[] = [];
+	// Brick hit dedup: both client prediction and server broadcast record here so only the first to fire spawns VFX
+	const recentBrickHits: { x: number; y: number; time: number }[] = [];
 	const DEDUP_RADIUS = 20; // pixels
 	const DEDUP_WINDOW = 300; // ms
 
@@ -506,8 +508,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		const now = Date.now();
 
 		// Prune old entries
-		while (recentClientHits.length > 0 && now - recentClientHits[0].time > DEDUP_WINDOW) {
-			recentClientHits.shift();
+		while (recentBrickHits.length > 0 && now - recentBrickHits[0].time > DEDUP_WINDOW) {
+			recentBrickHits.shift();
 		}
 
         // TODO: if it wasn't the local players hit, max volume at 0.5 (apart from TNT brick)
@@ -531,11 +533,14 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         if (data.brickType == 11 || data.brickType == 12) AudioManager.playAtX("hitOwned", data.x, { maxDistance: 1000 });
 
 		// Check if the client already spawned VFX for this hit
-		const isDuplicate = recentClientHits.some(h =>
+		const isDuplicate = recentBrickHits.some(h =>
 			Math.abs(h.x - data.x) < DEDUP_RADIUS && Math.abs(h.y - data.y) < DEDUP_RADIUS
 		);
 
 		if (!isDuplicate) {
+			// Record so client prediction won't double-fire
+			recentBrickHits.push({ x: data.x, y: data.y, time: now });
+
             const sheets = [
                 sparkWall2Sheet,
                 sparkWall3Sheet,
@@ -554,6 +559,33 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 				scale: BRICK_HIT_VFX_SCALE,
 			});
 		}
+	});
+
+    // Paddle hit dedup: both client prediction and server broadcast record here so only the first to fire triggers
+	const recentPaddleHits: { playerId: string; time: number }[] = [];
+	const PADDLE_DEDUP_WINDOW = 300; // ms
+
+    function handlePaddleHit(playerId: string) {
+		if (playerId != localPlayerId) return;
+
+		const now = Date.now();
+ 
+		// Prune old entries
+		while (recentPaddleHits.length > 0 && now - recentPaddleHits[0].time > PADDLE_DEDUP_WINDOW) {
+			recentPaddleHits.shift();
+		}
+ 
+		const isDuplicate = recentPaddleHits.some(h => h.playerId === playerId);
+		if (isDuplicate) return;
+ 
+		recentPaddleHits.push({ playerId, time: now });
+ 
+        // TODO: sound
+		console.log("Paddle has been hit");
+    }
+ 
+	room.onMessage("paddleHit", (data: { playerId: string }) => {
+		handlePaddleHit(data.playerId);
 	});
 
 	// Leaderboard state listeners
@@ -726,11 +758,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			const isLocalBall = local.ownerSessionId === room.sessionId;
 			const ownerTeam = ballOwnerTeam.get(ballId) ?? 0;
 
-			let paddle: { x: number; team: number; scaleX: number } | null = null;
+			let paddle: { x: number; team: number; scaleX: number, playerId: string } | null = null;
 			if (isLocalBall) {
 				const schema = room.state.paddles.get(room.sessionId);
 				if (schema) {
-					paddle = { x: localPaddleX, team: schema.team, scaleX: localScaleX };
+					paddle = { x: localPaddleX, team: schema.team, scaleX: localScaleX, playerId: localPlayerId };
 				}
 			} else {
 				paddle = room.state.paddles.get(local.ownerSessionId) ?? null;
@@ -743,8 +775,14 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 					if (hitVfxSpawned) return;
 					hitVfxSpawned = true;
 
-					// Record for dedup against server broadcast
-					recentClientHits.push({ x: contactX, y: contactY, time: Date.now() });
+					// Check if the server already handled this hit
+					const isDuplicate = recentBrickHits.some(h =>
+						Math.abs(h.x - contactX) < DEDUP_RADIUS && Math.abs(h.y - contactY) < DEDUP_RADIUS
+					);
+					if (isDuplicate) return;
+
+					// Record so server broadcast won't double-fire
+					recentBrickHits.push({ x: contactX, y: contactY, time: Date.now() });
 
                     const sheets = [
                         sparkWall2Sheet,
@@ -764,6 +802,10 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
                         scale: BRICK_HIT_VFX_SCALE,
                     });
 				},
+                
+                onPaddleHit: (playerId) => {
+		            handlePaddleHit(playerId);
+                }
 			}, room.state.bricksPerLine);
 
 			// Position correction toward server.

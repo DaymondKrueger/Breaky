@@ -20,12 +20,14 @@ export interface PhysicsPaddle {
 	x: number;
 	team: number;
 	scaleX: number;
+    playerId: string;
 }
 
 export type HitSide = "top" | "bottom" | "left" | "right";
 
 export interface BallStepCallbacks {
 	onBrickHit(brickIndex: number, hitSide: HitSide, contactX: number, contactY: number, brickType: number): void;
+    onPaddleHit(playerId: string): void;
 }
 
 const MAX_SPEED = 25;
@@ -152,6 +154,8 @@ export function stepBall(ball: BallState, bricks: ArrayLike<PhysicsBrick | undef
 			} else {
 				ball.y = paddleY + C.PADDLE_HEIGHT;
 			}
+
+            callbacks.onPaddleHit(paddle.playerId);
 		}
 	}
 

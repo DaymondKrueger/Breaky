@@ -44,7 +44,7 @@ export class BrickManager {
 				brick.brickType = team;
 				brick.health = 3;
 				if (Math.floor(Math.random() * 11) === 0) brick.brickType = BrickTypes.MYSTERY;
-				if (Math.floor(Math.random() * 5) === 0) brick.brickType = BrickTypes.DYNAMITE;
+				if (Math.floor(Math.random() * 81) === 0) brick.brickType = BrickTypes.DYNAMITE;
 				if (Math.floor(Math.random() * 76) === 0) brick.brickType = BrickTypes.INDESTRUCT;
 				this.state.bricks.push(brick);
 			}
