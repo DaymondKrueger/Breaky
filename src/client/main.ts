@@ -503,10 +503,10 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	const recentBrickHits: { x: number; y: number; time: number }[] = [];
 	const DEDUP_RADIUS = 20; // pixels
 	const DEDUP_WINDOW = 300; // ms
-
-	room.onMessage("brickHit", (data: { s: string; x: number; y: number, brickType: number }) => {
+ 
+	function handleBrickHit(hitSide: HitSide, contactX: number, contactY: number, brickType: number): void {
 		const now = Date.now();
-
+ 
 		// Prune old entries
 		while (recentBrickHits.length > 0 && now - recentBrickHits[0].time > DEDUP_WINDOW) {
 			recentBrickHits.shift();
@@ -514,51 +514,52 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 
         // TODO: if it wasn't the local players hit, max volume at 0.5 (apart from TNT brick)
         // Play sounds
-        if (data.brickType == 0 || data.brickType == 1) AudioManager.playAtX("hitBrick", data.x, { maxDistance: 1000 });
-        if (data.brickType == 2) AudioManager.playAtX("hitMystery", data.x, { maxDistance: 1000 });
-        if (data.brickType == 3) 
+        if (brickType == 0 || brickType == 1) AudioManager.playAtX("hitBrick", contactX, { maxDistance: 1000 });
+        if (brickType == 2) AudioManager.playAtX("hitMystery", contactX, { maxDistance: 1000 });
+        if (brickType == 3) 
         {
-            AudioManager.playAtX("explosion", data.x, { maxDistance: 5000 });
+            AudioManager.playAtX("explosion", contactX, { maxDistance: 5000 });
             // TODO: Spawn for each tnt individually (in case of chains), as well as use the center of the brick X/Y for the origin. Will need to do somewhere other than here
 			vfx.spawn({
 				sheet: explosionSheet,
-				x: data.x,
-				y: data.y + 64,
+				x: contactX,
+				y: contactY + 64,
 				scale: EXPLOSION_VFX_SCALE,
 			});
         }
-        if (data.brickType == 4) AudioManager.playAtX("hitIndestruct", data.x, { maxDistance: 1000 });
-        if (data.brickType == 5 || data.brickType == 6 || data.brickType == 7) AudioManager.playAtX("powerUp", data.x, { maxDistance: 1000 });
-        if (data.brickType == 8 || data.brickType == 9 || data.brickType == 10) AudioManager.playAtX("debuff", data.x, { maxDistance: 1000 });
-        if (data.brickType == 11 || data.brickType == 12) AudioManager.playAtX("hitOwned", data.x, { maxDistance: 1000 });
-
-		// Check if the client already spawned VFX for this hit
+        if (brickType == 4) AudioManager.playAtX("hitIndestruct", contactX, { maxDistance: 1000 });
+        if (brickType == 5 || brickType == 6 || brickType == 7) AudioManager.playAtX("powerUp", contactX, { maxDistance: 1000 });
+        if (brickType == 8 || brickType == 9 || brickType == 10) AudioManager.playAtX("debuff", contactX, { maxDistance: 1000 });
+        if (brickType == 11 || brickType == 12) AudioManager.playAtX("hitOwned", contactX, { maxDistance: 1000 });
+ 
 		const isDuplicate = recentBrickHits.some(h =>
-			Math.abs(h.x - data.x) < DEDUP_RADIUS && Math.abs(h.y - data.y) < DEDUP_RADIUS
+			Math.abs(h.x - contactX) < DEDUP_RADIUS && Math.abs(h.y - contactY) < DEDUP_RADIUS
 		);
+		if (isDuplicate) return;
+ 
+		recentBrickHits.push({ x: contactX, y: contactY, time: now });
+ 
+		const sheets = [
+			sparkWall2Sheet,
+			sparkWall3Sheet,
+			sparkWall4Sheet,
+			sparkWall8Sheet,
+		];
+		const selectedSheet = sheets[Math.floor(Math.random() * sheets.length)];
+ 
+		const t = hitSideTransform(hitSide);
+		vfx.spawn({
+			sheet: selectedSheet,
+			x: contactX,
+			y: contactY,
+			rotation: t.rotation,
+			flipY: t.flipY,
+			scale: BRICK_HIT_VFX_SCALE,
+		});
+	}
 
-		if (!isDuplicate) {
-			// Record so client prediction won't double-fire
-			recentBrickHits.push({ x: data.x, y: data.y, time: now });
-
-            const sheets = [
-                sparkWall2Sheet,
-                sparkWall3Sheet,
-                sparkWall4Sheet,
-                sparkWall8Sheet,
-            ];
-            const selectedSheet = sheets[Math.floor(Math.random() * sheets.length)];
-
-			const t = hitSideTransform(data.s as HitSide);
-			vfx.spawn({
-				sheet: selectedSheet,
-				x: data.x,
-				y: data.y,
-				rotation: t.rotation,
-				flipY: t.flipY,
-				scale: BRICK_HIT_VFX_SCALE,
-			});
-		}
+	room.onMessage("brickHit", (data: { s: string; x: number; y: number, brickType: number }) => {
+		handleBrickHit(data.s as HitSide, data.x, data.y, data.brickType);
 	});
 
     // Paddle hit dedup: both client prediction and server broadcast record here so only the first to fire triggers
@@ -768,39 +769,9 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 				paddle = room.state.paddles.get(local.ownerSessionId) ?? null;
 			}
 
-			let hitVfxSpawned = false;
 			stepBall(local, room.state.bricks, paddle, ownerTeam, dt, {
-				onBrickHit: (_idx, hitSide, contactX, contactY) => {
-					// Spawn only one VFX per collision event (multi-brick hits share the same contact point)
-					if (hitVfxSpawned) return;
-					hitVfxSpawned = true;
-
-					// Check if the server already handled this hit
-					const isDuplicate = recentBrickHits.some(h =>
-						Math.abs(h.x - contactX) < DEDUP_RADIUS && Math.abs(h.y - contactY) < DEDUP_RADIUS
-					);
-					if (isDuplicate) return;
-
-					// Record so server broadcast won't double-fire
-					recentBrickHits.push({ x: contactX, y: contactY, time: Date.now() });
-
-                    const sheets = [
-                        sparkWall2Sheet,
-                        sparkWall3Sheet,
-                        sparkWall4Sheet,
-                        sparkWall8Sheet,
-                    ];
-                    const selectedSheet = sheets[Math.floor(Math.random() * sheets.length)];
-
-                    const t = hitSideTransform(hitSide);
-                    vfx.spawn({
-                        sheet: selectedSheet,
-                        x: contactX,
-                        y: contactY,
-                        rotation: t.rotation,
-                        flipY: t.flipY,
-                        scale: BRICK_HIT_VFX_SCALE,
-                    });
+				onBrickHit: (_idx, hitSide, contactX, contactY, brickType) => {
+		            handleBrickHit(hitSide, contactX, contactY, brickType);
 				},
                 
                 onPaddleHit: (playerId) => {
