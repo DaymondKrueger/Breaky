@@ -225,6 +225,7 @@ export async function loadSounds(): Promise<void> {
         await AudioManager.load("powerUp", "powerUp.wav");
         await AudioManager.load("debuff", "debuff.wav");
         await AudioManager.load("hitOwned", "hitOwned.wav");
+        await AudioManager.load("hitPaddle", "hitPaddle.wav");
 		registered = true;
     }
 }

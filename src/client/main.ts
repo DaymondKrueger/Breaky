@@ -511,6 +511,13 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		while (recentBrickHits.length > 0 && now - recentBrickHits[0].time > DEDUP_WINDOW) {
 			recentBrickHits.shift();
 		}
+ 
+		const isDuplicate = recentBrickHits.some(h =>
+			Math.abs(h.x - contactX) < DEDUP_RADIUS && Math.abs(h.y - contactY) < DEDUP_RADIUS
+		);
+		if (isDuplicate) return;
+ 
+		recentBrickHits.push({ x: contactX, y: contactY, time: now });
 
         // TODO: if it wasn't the local players hit, max volume at 0.5 (apart from TNT brick)
         // Play sounds
@@ -531,13 +538,6 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         if (brickType == 5 || brickType == 6 || brickType == 7) AudioManager.playAtX("powerUp", contactX, { maxDistance: 1000 });
         if (brickType == 8 || brickType == 9 || brickType == 10) AudioManager.playAtX("debuff", contactX, { maxDistance: 1000 });
         if (brickType == 11 || brickType == 12) AudioManager.playAtX("hitOwned", contactX, { maxDistance: 1000 });
- 
-		const isDuplicate = recentBrickHits.some(h =>
-			Math.abs(h.x - contactX) < DEDUP_RADIUS && Math.abs(h.y - contactY) < DEDUP_RADIUS
-		);
-		if (isDuplicate) return;
- 
-		recentBrickHits.push({ x: contactX, y: contactY, time: now });
  
 		const sheets = [
 			sparkWall2Sheet,
@@ -581,8 +581,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
  
 		recentPaddleHits.push({ playerId, time: now });
  
-        // TODO: sound
-		console.log("Paddle has been hit");
+        AudioManager.play("hitPaddle");
     }
  
 	room.onMessage("paddleHit", (data: { playerId: string }) => {
