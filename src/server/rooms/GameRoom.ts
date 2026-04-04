@@ -450,8 +450,8 @@ export class GameRoom extends Room<GameState> {
 		// updateAll returns ball IDs that left the field this tick.
 		const destroyed = this.ballManager.updateAll(dt, 
         () => { shakeNeeded = true; },
-        (hitSide, contactX, contactY, brickType) => {
-			this.broadcast("brickHit", { s: hitSide, x: contactX, y: contactY, brickType: brickType });
+        (brickIndex, hitSide, contactX, contactY, brickType) => {
+			this.broadcast("brickHit", { i: brickIndex, s: hitSide, x: contactX, y: contactY, brickType: brickType });
         },
         (playerId) => {
 			this.broadcast("paddleHit", { playerId });

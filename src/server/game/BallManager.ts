@@ -41,7 +41,7 @@ export class BallManager {
 		for (const ballId of toRemove) this.removeBall(ballId);
 	}
 
-	updateAll(dt: number, broadcastShake: () => void, broadcastBrickHit: (hitSide: HitSide, contactX: number, contactY: number, brickType: number) => void, broadcastPaddleHit: (playerId: string) => void): string[] {
+	updateAll(dt: number, broadcastShake: () => void, broadcastBrickHit: (brickIndex: number, hitSide: HitSide, contactX: number, contactY: number, brickType: number) => void, broadcastPaddleHit: (playerId: string) => void): string[] {
 		const toDestroy: string[] = [];
 		this.state.balls.forEach((_ball, ballId) => {
 			if (this.updateBall(ballId, dt, broadcastShake, broadcastBrickHit, broadcastPaddleHit) === "destroy") {
@@ -73,7 +73,7 @@ export class BallManager {
 		return found;
 	}
 
-	private updateBall(ballId: string, dt: number, broadcastShake: () => void, broadcastBrickHit: (hitSide: HitSide, contactX: number, contactY: number, brickType: number) => void, broadcastPaddleHit: (playerId: string) => void): "ok" | "destroy" {
+	private updateBall(ballId: string, dt: number, broadcastShake: () => void, broadcastBrickHit: (brickIndex: number, hitSide: HitSide, contactX: number, contactY: number, brickType: number) => void, broadcastPaddleHit: (playerId: string) => void): "ok" | "destroy" {
 		const ball = this.state.balls.get(ballId)!;
 		const ownerPaddle = this.state.paddles.get(ball.ownerSessionId);
 		const ownerTeam = ownerPaddle?.team ?? 0;
@@ -89,7 +89,7 @@ export class BallManager {
 
 		const callbacks: BallStepCallbacks = {
 			onBrickHit: (brickIndex: number, hitSide: HitSide, contactX: number, contactY: number, brickType: number) => {
-				broadcastBrickHit(hitSide, contactX, contactY, brickType);
+				broadcastBrickHit(brickIndex, hitSide, contactX, contactY, brickType);
 
 				if (!ownerPaddle) return;
 				const brick = this.state.bricks[brickIndex];

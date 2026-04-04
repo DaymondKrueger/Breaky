@@ -499,12 +499,11 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 	room.onMessage("shake", () => screenShake(app));
 	room.onMessage("pong", () => { hudPing.textContent = `Ping: ${Date.now() - pingStart}ms`; });
 
-	// Brick hit dedup: both client prediction and server broadcast record here so only the first to fire spawns VFX
-	const recentBrickHits: { x: number; y: number; time: number }[] = [];
-	const DEDUP_RADIUS = 20; // pixels
+	// Brick hit dedup: both client prediction and server broadcast record here so only the first to fire triggers
+	const recentBrickHits: { brickIndex: number; time: number }[] = [];
 	const DEDUP_WINDOW = 300; // ms
  
-	function handleBrickHit(hitSide: HitSide, contactX: number, contactY: number, brickType: number): void {
+	function handleBrickHit(brickIndex: number, hitSide: HitSide, contactX: number, contactY: number, brickType: number): void {
 		const now = Date.now();
  
 		// Prune old entries
@@ -512,12 +511,10 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			recentBrickHits.shift();
 		}
  
-		const isDuplicate = recentBrickHits.some(h =>
-			Math.abs(h.x - contactX) < DEDUP_RADIUS && Math.abs(h.y - contactY) < DEDUP_RADIUS
-		);
+		const isDuplicate = recentBrickHits.some(h => h.brickIndex === brickIndex);
 		if (isDuplicate) return;
  
-		recentBrickHits.push({ x: contactX, y: contactY, time: now });
+		recentBrickHits.push({ brickIndex, time: now });
 
         // TODO: if it wasn't the local players hit, max volume at 0.5 (apart from TNT brick)
         // Play sounds
@@ -538,7 +535,7 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
         if (brickType == 5 || brickType == 6 || brickType == 7) AudioManager.playAtX("powerUp", contactX, { maxDistance: 1000 });
         if (brickType == 8 || brickType == 9 || brickType == 10) AudioManager.playAtX("debuff", contactX, { maxDistance: 1000 });
         if (brickType == 11 || brickType == 12) AudioManager.playAtX("hitOwned", contactX, { maxDistance: 1000 });
- 
+
 		const sheets = [
 			sparkWall2Sheet,
 			sparkWall3Sheet,
@@ -558,8 +555,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		});
 	}
 
-	room.onMessage("brickHit", (data: { s: string; x: number; y: number, brickType: number }) => {
-		handleBrickHit(data.s as HitSide, data.x, data.y, data.brickType);
+	room.onMessage("brickHit", (data: { i: number; s: string; x: number; y: number, brickType: number }) => {
+		handleBrickHit(data.i, data.s as HitSide, data.x, data.y, data.brickType);
 	});
 
     // Paddle hit dedup: both client prediction and server broadcast record here so only the first to fire triggers
@@ -769,8 +766,8 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 			}
 
 			stepBall(local, room.state.bricks, paddle, ownerTeam, dt, {
-				onBrickHit: (_idx, hitSide, contactX, contactY, brickType) => {
-		            handleBrickHit(hitSide, contactX, contactY, brickType);
+				onBrickHit: (idx, hitSide, contactX, contactY, brickType) => {
+		            handleBrickHit(idx, hitSide, contactX, contactY, brickType);
 				},
                 
                 onPaddleHit: (playerId) => {
