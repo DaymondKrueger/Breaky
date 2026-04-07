@@ -216,6 +216,26 @@ attemptReconnect().then(async (reconnected) => {
     // Pre-connect to server on menu load
     await preConnect();
 
+    // Check for ?join=CODE in the URL (invite links)
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinCode = urlParams.get("join");
+    if (joinCode) {
+        // Clean the URL so refreshing doesn't retry the join
+        window.history.replaceState({}, "", window.location.pathname);
+        try {
+            const rooms = await client.getAvailableRooms("game_room");
+            const target = rooms.find(r => r.metadata?.roomCode === joinCode.toUpperCase());
+            if (target) {
+                await enterRoom(client.joinById<GameState>(target.roomId, { name: getUsername(), playerId: getPlayerId() }));
+                return; // Successfully joined, skip menu setup
+            }
+            // Room not found — fall through to normal menu
+            console.warn("Invite link: no room found with code", joinCode);
+        } catch (e) {
+            console.warn("Invite link join failed:", e);
+        }
+    }
+
     // Play Game, join any ongoing or lobby room
     document.getElementById("play-game")!.addEventListener("click", () => playGame());
 

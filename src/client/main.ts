@@ -267,6 +267,18 @@ export async function initGame(room: Colyseus.Room<GameState>): Promise<void> {
 		}
 	});
 
+	const inviteBtn = document.getElementById("invite-btn")!;
+	inviteBtn.addEventListener("click", () => {
+		const code = room.state.roomCode;
+		const url = `${window.location.origin}${window.location.pathname}?join=${code}`;
+		navigator.clipboard.writeText(url).then(() => {
+			inviteBtn.textContent = "Copied!";
+			setTimeout(() => { inviteBtn.textContent = "Copy Invite Link"; }, 2000);
+		}).catch(() => {
+			prompt("Share this link:", url);
+		});
+	});
+
 	// Renderer maps
 	const brickObjects = new Map<number, ClientBrick>();
 	const paddleObjects = new Map<string, ClientPaddle>();

@@ -82,6 +82,7 @@ export class GameState extends Schema {
 	rematchCount: number = 0;
 	gameOverReason: string = "";
 	hostPlayerId: string = "";
+	roomCode: string = "";
 }
 defineTypes(GameState, {
 	paddles: { map: PaddleSchema },
@@ -97,4 +98,5 @@ defineTypes(GameState, {
     rematchCount: "uint8",
 	gameOverReason: "string",
 	hostPlayerId: "string",
+	roomCode: "string",
 });

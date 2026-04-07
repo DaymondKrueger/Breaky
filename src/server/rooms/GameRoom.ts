@@ -10,6 +10,13 @@ const MIN_PLAYERS = 1;
 const COUNTDOWN_SECONDS = 5;
 const RECONNECT_TIMEOUT = 15;
 
+function generateRoomCode(length = 6): string {
+	const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1 to avoid confusion
+	let code = "";
+	for (let i = 0; i < length; i++) code += chars[Math.floor(Math.random() * chars.length)];
+	return code;
+}
+
 interface JoinOptions { name?: string; playerId?: string; isCreator?: boolean; }
 interface InputMessage { left: boolean; right: boolean; releaseBall: boolean; }
 
@@ -40,6 +47,7 @@ export class GameRoom extends Room<GameState> {
 
 	onCreate(_options: any) {
 		this.setState(new GameState());
+		this.state.roomCode = generateRoomCode();
         this.setPatchRate(1000 / 20); // match simulation rate
 
 		this.brickManager = new BrickManager(this.state);
@@ -285,6 +293,7 @@ export class GameRoom extends Room<GameState> {
 			playerCount,
 			maxPlayers: this.maxClients,
 			hostName,
+			roomCode: this.state.roomCode,
 		});
 	}
 
